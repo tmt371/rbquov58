@@ -1,10 +1,12 @@
 // /04-core-code/config-manager.js
+import { f2Config } from './config/f2-config.js';
 
 export class ConfigManager {
     constructor(eventAggregator) {
         this.eventAggregator = eventAggregator;
         this.priceMatrices = null;
         this.accessories = null;
+        this.f2Config = f2Config || {}; // Load the F2 config
         this.fabricTypeSequence = null; 
         this.isInitialized = false;
     }
@@ -87,5 +89,13 @@ export class ConfigManager {
             return []; // Return an empty array to prevent downstream errors
         }
         return this.fabricTypeSequence;
+    }
+
+    /**
+     * [NEW] Retrieves the F2 panel configuration.
+     * @returns {object} The F2 configuration object.
+     */
+    getF2Config() {
+        return this.f2Config;
     }
 }
