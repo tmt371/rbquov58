@@ -11,11 +11,12 @@
 }
 #left-panel {
     position: fixed;
-    top: 0;
     left: 0;
-    height: 100%; /* Default to full height, will be adjusted by JS */
+    /* [REMOVED] The fixed width is removed to allow dynamic sizing by JavaScript. */
+    /* width: 400px; */
     background-color: var(--k1-bg-color);
-    border-right: 1px solid var(--panel-border-color);
+    border: 1px solid var(--panel-border-color);
+    border-left: none;
     box-shadow: 2px 0 10px rgba(0,0,0,0.1);
     z-index: 100;
     transition: transform 0.3s ease-in-out, background-color 0.3s ease-in-out;
@@ -28,22 +29,33 @@
 #left-panel.is-expanded {
     transform: translateX(0);
 }
+
+/* [REFACTORED] Decoupled toggle from the panel for persistent visibility */
 #left-panel-toggle {
-    position: fixed; /* Attach to the viewport */
-    top: 10px;       /* Position from the top */
-    left: 10px;      /* Position from the left */
-    width: 32px;
-    height: 32px;
-    background-color: rgba(229, 231, 235, 0.8);
+    position: fixed; /* Changed from absolute to fixed */
+    top: 50%; /* Position vertically centered */
+    left: 0; /* Align to the left edge of the viewport */
+    transform: translateY(-50%); /* Fine-tune vertical centering */
+    width: 24px;
+    height: 80px;
+    background-color: #e5e7eb;
     border: 1px solid var(--panel-border-color);
-    border-radius: 50%;
+    border-left: none;
+    border-radius: 0 8px 8px 0;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 101; /* Ensure it's above the collapsed panel */
-    backdrop-filter: blur(2px);
+    z-index: 101; /* Ensure it's above the panel */
+    transition: transform 0.3s ease-in-out;
 }
+
+#left-panel.is-expanded + #left-panel-toggle {
+    /* When the panel is expanded, move the toggle to its right edge */
+    transform: translateY(-50%) translateX(var(--left-panel-width, 400px));
+    /* We use a CSS variable here that JS will set */
+}
+
 .tab-container { display: flex; flex-shrink: 0; background-color: #d1d5db; }
 .tab-button {
     height: 30px; flex-grow: 1; border: none; background-color: transparent; cursor: pointer;
