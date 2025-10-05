@@ -238,6 +238,9 @@ class App {
         }, 100);
         
         console.log("Application running and interactive.");
+
+        // Add a ready signal for automation scripts.
+        document.body.classList.add('app-is-ready');
     }
 }
 
