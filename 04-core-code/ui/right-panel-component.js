@@ -65,11 +65,17 @@ export class RightPanelComponent {
                 button.addEventListener('click', () => this.eventAggregator.publish(eventName));
             }
         }
+
+        // Add listener for the new clickable remote quantity div
+        const remote1chQtyDiv = this.f1.inputs['remote-1ch'];
+        if (remote1chQtyDiv) {
+            remote1chQtyDiv.addEventListener('click', () => this.eventAggregator.publish('userRequestedRemoteDistribution'));
+        }
     }
 
     _initializeF1InputListeners() {
         // Only listen to the inputs that are still manually editable
-        const manualInputs = ['remote-1ch', 'dual-combo', 'slim'];
+        const manualInputs = ['dual-combo', 'slim'];
         manualInputs.forEach(key => {
             const inputElement = this.f1.inputs[key];
             if (inputElement) {
@@ -229,31 +235,65 @@ export class RightPanelComponent {
 
         const items = state.quoteData.products.rollerBlind.items;
         const uiState = state.ui;
+        const formatPrice = (price) => (price > 0 ? `$${price.toFixed(2)}` : '');
 
+        // --- Handle Linked Items (Winder, Motor, Charger, Cord) ---
         const linkedQuantities = {
             winder: items.filter(item => item.winder === 'HD').length,
             motor: items.filter(item => !!item.motor).length,
-            'remote-16ch': uiState.driveRemoteCount, // Assuming K4 remote count is for 16ch
             charger: uiState.driveChargerCount,
             '3m-cord': uiState.driveCordCount
         };
 
-        const multipliers = {
-            winder: 8, motor: 160, 'remote-16ch': 70, charger: 25, '3m-cord': 5
-        };
-
-        this.f1LinkedPrices = {}; // [FIX] Reset linked prices on each render
+        const multipliers = { winder: 8, motor: 160, charger: 25, '3m-cord': 5 };
+        this.f1LinkedPrices = {};
 
         for (const [key, qty] of Object.entries(linkedQuantities)) {
             if (this.f1.displays.qty[key]) {
                 this.f1.displays.qty[key].textContent = qty || '0';
             }
             const price = (qty || 0) * (multipliers[key] || 0);
-            this.f1LinkedPrices[key] = price; // [FIX] Store linked prices
+            this.f1LinkedPrices[key] = price;
             if (this.f1.displays.price[key]) {
-                this.f1.displays.price[key].textContent = price > 0 ? `$${price.toFixed(2)}` : '';
+                this.f1.displays.price[key].textContent = formatPrice(price);
             }
         }
+
+        // --- Handle Remote Distribution ---
+        const totalRemoteQty = uiState.driveRemoteCount || 0;
+        let qty1ch = uiState.f1_remote_1ch_qty;
+        let qty16ch = uiState.f1_remote_16ch_qty;
+
+        // Initialize distribution if not set
+        if (qty16ch === null) {
+            qty1ch = 0;
+            qty16ch = totalRemoteQty;
+            // We don't directly modify state here, just for rendering.
+            // The dialog confirmation will set the state permanently.
+        }
+
+        // Render quantities
+        if (this.f1.inputs['remote-1ch']) {
+            this.f1.inputs['remote-1ch'].textContent = qty1ch;
+        }
+        if (this.f1.displays.qty['remote-16ch']) {
+            this.f1.displays.qty['remote-16ch'].textContent = qty16ch;
+        }
+
+        // Calculate and render prices using the service for consistency
+        const price1ch = this.calculationService.calculateF1ComponentPrice('remote-1ch', qty1ch);
+        const price16ch = this.calculationService.calculateF1ComponentPrice('remote-16ch', qty16ch);
+
+        if (this.f1.displays.price['remote-1ch']) {
+            this.f1.displays.price['remote-1ch'].textContent = formatPrice(price1ch);
+        }
+        if (this.f1.displays.price['remote-16ch']) {
+            this.f1.displays.price['remote-16ch'].textContent = formatPrice(price16ch);
+        }
+
+        // Add remote prices to the linked prices for total calculation
+        this.f1LinkedPrices['remote-1ch'] = price1ch;
+        this.f1LinkedPrices['remote-16ch'] = price16ch;
 
         this._updateF1Total();
     }
