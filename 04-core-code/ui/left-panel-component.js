@@ -88,7 +88,6 @@ export class LeftPanelComponent {
             button.disabled = isInEditMode && !isThisButtonActive;
         });
 
-        // [NEW] Disable the panel toggle handle when any edit mode is active.
         if (this.panelToggle) {
             this.panelToggle.style.pointerEvents = isInEditMode ? 'none' : 'auto';
             this.panelToggle.style.opacity = isInEditMode ? '0.5' : '1';
@@ -112,17 +111,17 @@ export class LeftPanelComponent {
     _updatePanelButtonStates(uiState, quoteData) {
         const { 
             activeEditMode, locationInputValue, lfModifiedRowIndexes, 
-            dualChainMode, dualPrice, targetCell, dualChainInputValue,
+            dualChainMode, targetCell, dualChainInputValue,
             driveAccessoryMode, driveRemoteCount, driveChargerCount, driveCordCount,
             driveWinderTotalPrice, driveMotorTotalPrice, driveRemoteTotalPrice, driveChargerTotalPrice, driveCordTotalPrice,
             driveGrandTotal,
-            summaryWinderPrice, summaryMotorPrice,
-            summaryRemotePrice, summaryChargerPrice, summaryCordPrice, summaryAccessoriesTotal
+            summaryAccessoriesTotal // [FIX] Read the centrally calculated total
         } = uiState;
         
-        // [REFACTORED] Get items from the correct location in the new state structure.
         const currentProductKey = quoteData.currentProduct;
-        const items = quoteData.products[currentProductKey].items;
+        const productData = quoteData.products[currentProductKey];
+        const items = productData.items;
+        const accessoriesSummary = productData.summary.accessories || {};
 
         // --- K1 Location Input State ---
         if (this.locationInput) {
@@ -145,12 +144,12 @@ export class LeftPanelComponent {
         if (this.lfButton) this.lfButton.classList.toggle('active', isLFSelectMode);
         if (this.lfDelButton) this.lfDelButton.classList.toggle('active', isLFDeleteMode);
 
-        const hasB2 = items.some(item => item.fabricType === 'B2');
         const hasLFModified = lfModifiedRowIndexes.size > 0;
 
         if (this.locationButton) this.locationButton.disabled = isAnyK2ModeActive;
         if (this.fabricColorButton) this.fabricColorButton.disabled = activeEditMode !== null && !isFCMode;
-        if (this.lfButton) this.lfButton.disabled = (activeEditMode !== null && !isLFSelectMode) || !hasB2;
+        // [FIX] Removed the `hasB2` check to always enable the button unless another mode is active.
+        if (this.lfButton) this.lfButton.disabled = activeEditMode !== null && !isLFSelectMode;
         if (this.lfDelButton) this.lfDelButton.disabled = (activeEditMode !== null && !isLFDeleteMode) || !hasLFModified;
 
         // --- K3 Button Active/Disabled States ---
@@ -231,27 +230,30 @@ export class LeftPanelComponent {
             }
         }
         if (this.k5DualPriceValue) {
+            const dualPrice = accessoriesSummary.dualCostSum;
             const newText = (typeof dualPrice === 'number') ? `$${dualPrice.toFixed(0)}` : '';
             if (this.k5DualPriceValue.textContent !== newText) {
                 this.k5DualPriceValue.textContent = newText;
             }
         }
         
+        // [FIX] Render all summary prices directly from the central quoteData state
         if (this.k5WinderSummaryDisplay) {
-            this.k5WinderSummaryDisplay.value = formatPrice(summaryWinderPrice);
+            this.k5WinderSummaryDisplay.value = formatPrice(accessoriesSummary.winderCostSum);
         }
         if (this.k5MotorSummaryDisplay) {
-            this.k5MotorSummaryDisplay.value = formatPrice(summaryMotorPrice);
+            this.k5MotorSummaryDisplay.value = formatPrice(accessoriesSummary.motorCostSum);
         }
         if (this.k5RemoteSummaryDisplay) {
-            this.k5RemoteSummaryDisplay.value = formatPrice(summaryRemotePrice);
+            this.k5RemoteSummaryDisplay.value = formatPrice(accessoriesSummary.remoteCostSum);
         }
         if (this.k5ChargerSummaryDisplay) {
-            this.k5ChargerSummaryDisplay.value = formatPrice(summaryChargerPrice);
+            this.k5ChargerSummaryDisplay.value = formatPrice(accessoriesSummary.chargerCostSum);
         }
         if (this.k5CordSummaryDisplay) {
-            this.k5CordSummaryDisplay.value = formatPrice(summaryCordPrice);
+            this.k5CordSummaryDisplay.value = formatPrice(accessoriesSummary.cordCostSum);
         }
+        // [FIX] Render the K5 total from the centrally calculated value in uiState
         if (this.k5AccessoriesTotalDisplay) {
             this.k5AccessoriesTotalDisplay.value = formatPrice(summaryAccessoriesTotal);
         }
