@@ -107,6 +107,7 @@ export class AppController {
         this.eventAggregator.subscribe('fileLoaded', (data) => this._handleFileLoad(data));
         
         this.eventAggregator.subscribe('costDiscountEntered', (data) => this._handleCostDiscountEntered(data));
+        this.eventAggregator.subscribe('userRequestedRemoteDistribution', () => this._handleRemoteDistributionRequest());
     }
 
     _subscribeF2Events() {
@@ -189,12 +190,13 @@ export class AppController {
             removal: 20
         };
         
-        const winderPrice = uiState.summaryWinderPrice || 0;
-        const dualPrice = uiState.dualPrice || 0;
-        const motorPrice = uiState.summaryMotorPrice || 0;
-        const remotePrice = uiState.summaryRemotePrice || 0;
-        const chargerPrice = uiState.summaryChargerPrice || 0;
-        const cordPrice = uiState.summaryCordPrice || 0;
+        const accessories = productSummary.accessories || {};
+        const winderPrice = accessories.winderCostSum || 0;
+        const dualPrice = accessories.dualCostSum || 0;
+        const motorPrice = accessories.motorCostSum || 0;
+        const remotePrice = accessories.remoteCostSum || 0;
+        const chargerPrice = accessories.chargerCostSum || 0;
+        const cordPrice = accessories.cordCostSum || 0;
 
         const wifiQty = f2State.wifiQty || 0;
         const deliveryQty = f2State.deliveryQty || 0;
@@ -225,9 +227,6 @@ export class AppController {
         this.uiService.setF2Value('deliveryFee', deliveryFee);
         this.uiService.setF2Value('installFee', installFee);
         this.uiService.setF2Value('removalFee', removalFee);
-        this.uiService.setF2Value('acceSum', acceSum);
-        this.uiService.setF2Value('eAcceSum', eAcceSum);
-        this.uiService.setF2Value('surchargeFee', surchargeFee);
         this.uiService.setF2Value('firstRbPrice', firstRbPrice);
         this.uiService.setF2Value('disRbPrice', disRbPrice);
         this.uiService.setF2Value('sumPrice', sumPrice);
@@ -292,6 +291,60 @@ export class AppController {
     publishInitialState() { this._publishStateChange(); }
     _publishStateChange() {
         this.eventAggregator.publish('stateChanged', this._getFullState());
+    }
+
+    _handleRemoteDistributionRequest() {
+        const uiState = this.uiService.getState();
+        const totalRemoteCount = uiState.driveRemoteCount || 0;
+
+        // Use current distribution if available, otherwise default to 0 and total
+        const initial1ch = uiState.f1_remote_1ch_qty;
+        const initial16ch = (uiState.f1_remote_16ch_qty === null) ? totalRemoteCount : uiState.f1_remote_16ch_qty;
+
+        this.eventAggregator.publish('showConfirmationDialog', {
+            message: `Total remotes: ${totalRemoteCount}. Please distribute them.`,
+            layout: [
+                [
+                    { type: 'text', text: '1-Ch Qty:', className: 'dialog-label' },
+                    { type: 'input', id: 'dialog-input-1ch', value: initial1ch },
+                    { type: 'text', text: '16-Ch Qty:', className: 'dialog-label' },
+                    { type: 'input', id: 'dialog-input-16ch', value: initial16ch }
+                ],
+                [
+                    {
+                        type: 'button',
+                        text: 'Confirm',
+                        className: 'primary-confirm-button',
+                        colspan: 2,
+                        callback: () => {
+                            const input1ch = document.getElementById('dialog-input-1ch');
+                            const input16ch = document.getElementById('dialog-input-16ch');
+                            const qty1ch = parseInt(input1ch.value, 10);
+                            const qty16ch = parseInt(input16ch.value, 10);
+
+                            if (isNaN(qty1ch) || isNaN(qty16ch) || qty1ch < 0 || qty16ch < 0) {
+                                this.eventAggregator.publish('showNotification', { message: 'Quantities must be positive numbers.', type: 'error' });
+                                return false; // Prevent closing
+                            }
+
+                            if (qty1ch + qty16ch !== totalRemoteCount) {
+                                this.eventAggregator.publish('showNotification', {
+                                    message: `Total must equal ${totalRemoteCount}. Current total: ${qty1ch + qty16ch}.`,
+                                    type: 'error'
+                                });
+                                return false; // Prevent closing
+                            }
+
+                            this.uiService.setF1RemoteDistribution(qty1ch, qty16ch);
+                            this._publishStateChange();
+                            return true; // Allow closing
+                        }
+                    },
+                    { type: 'button', text: 'Cancel', className: 'secondary', colspan: 2, callback: () => {} }
+                ]
+            ],
+            closeOnOverlayClick: false // Prevent accidental closing
+        });
     }
 
     _startAutoSave() {
