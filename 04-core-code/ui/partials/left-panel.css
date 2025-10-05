@@ -50,11 +50,6 @@
     transition: transform 0.3s ease-in-out;
 }
 
-#left-panel.is-expanded + #left-panel-toggle {
-    /* When the panel is expanded, move the toggle to its right edge */
-    transform: translateY(-50%) translateX(var(--left-panel-width, 400px));
-    /* We use a CSS variable here that JS will set */
-}
 
 .tab-container { display: flex; flex-shrink: 0; background-color: #d1d5db; }
 .tab-button {

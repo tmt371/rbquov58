@@ -94,8 +94,6 @@ export class UIManager {
         this.leftPanelElement.style.width = `${newWidth}px`;
         this.leftPanelElement.style.height = `${newHeight}px`;
 
-        // [NEW] Set the CSS variable for the toggle's transform
-        this.leftPanelElement.style.setProperty('--left-panel-width', `${newWidth}px`);
     }
 
     render(state) {
