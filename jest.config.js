@@ -6,6 +6,9 @@ export default {
     '^.+\\.js$': 'babel-jest',
   },
   
+  // 由於我們使用 ES Modules，需要設定這個來讓 Jest 正確處理 `export default`
+  esModuleInterop: true,
+
   // 測試環境設為 jsdom，讓我們可以使用瀏覽器環境中的物件 (如 window)
   testEnvironment: 'jsdom',
 
