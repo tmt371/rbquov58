@@ -151,7 +151,7 @@ export class LeftPanelComponent {
 
         if (this.locationButton) this.locationButton.disabled = isAnyK2ModeActive;
         if (this.fabricColorButton) this.fabricColorButton.disabled = activeEditMode !== null && !isFCMode;
-        if (this.lfButton) this.lfButton.disabled = (activeEditMode !== null && !isLFSelectMode) || !hasB2;
+        if (this.lfButton) this.lfButton.disabled = activeEditMode !== null && !isLFSelectMode;
         if (this.lfDelButton) this.lfDelButton.disabled = (activeEditMode !== null && !isLFDeleteMode) || !hasLFModified;
 
         // --- K3 Button Active/Disabled States ---
