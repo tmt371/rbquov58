@@ -141,11 +141,14 @@ export class DualChainView {
         this.uiService.setVisibleColumns(['sequence', 'fabricTypeDisplay', 'location', 'dual', 'chain']);
         
         const currentState = this.uiService.getState();
+        const currentProductData = this.quoteService.getCurrentProductData();
+
         this.uiService.setSummaryWinderPrice(currentState.driveWinderTotalPrice);
         this.uiService.setSummaryMotorPrice(currentState.driveMotorTotalPrice);
         this.uiService.setSummaryRemotePrice(currentState.driveRemoteTotalPrice);
         this.uiService.setSummaryChargerPrice(currentState.driveChargerTotalPrice);
         this.uiService.setSummaryCordPrice(currentState.driveCordTotalPrice);
+        this.uiService.setDualPrice(currentProductData.summary.dualCostSum);
 
         this._updateSummaryAccessoriesTotal();
     }
