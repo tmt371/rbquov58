@@ -159,4 +159,64 @@ export class CalculationService {
 
         return unitPrice * quantity;
     }
+
+    /**
+     * [NEW] Calculates all values for the F2 summary panel.
+     * This logic was moved from app-controller.js to centralize business calculations.
+     * @param {object} quoteData - The entire quote data object.
+     * @param {object} f2State - The state object for the F2 panel from uiService.
+     * @returns {object} An object containing all calculated F2 summary values.
+     */
+    calculateF2Summary(quoteData, f2State) {
+        const currentProductKey = quoteData.currentProduct;
+        const productSummary = quoteData.products[currentProductKey].summary;
+        const totalSumFromQuickQuote = productSummary.totalSum || 0;
+
+        const f2Config = this.configManager.getF2Config();
+        const UNIT_PRICES = f2Config.unitPrices || {};
+
+        const accessories = productSummary.accessories || {};
+        const winderPrice = accessories.winderCostSum || 0;
+        const dualPrice = accessories.dualCostSum || 0;
+        const motorPrice = accessories.motorCostSum || 0;
+        const remotePrice = accessories.remoteCostSum || 0;
+        const chargerPrice = accessories.chargerCostSum || 0;
+        const cordPrice = accessories.cordCostSum || 0;
+
+        const wifiQty = f2State.wifiQty || 0;
+        const deliveryQty = f2State.deliveryQty || 0;
+        const installQty = f2State.installQty || 0;
+        const removalQty = f2State.removalQty || 0;
+        const mulTimes = f2State.mulTimes || 0;
+        const discount = f2State.discount || 0;
+
+        const wifiSum = wifiQty * UNIT_PRICES.wifi;
+        const deliveryFee = deliveryQty * UNIT_PRICES.delivery;
+        const installFee = installQty * UNIT_PRICES.install;
+        const removalFee = removalQty * UNIT_PRICES.removal;
+
+        const acceSum = winderPrice + dualPrice;
+        const eAcceSum = motorPrice + remotePrice + chargerPrice + cordPrice + wifiSum;
+        const surchargeFee =
+            (f2State.deliveryFeeExcluded ? 0 : deliveryFee) +
+            (f2State.installFeeExcluded ? 0 : installFee) +
+            (f2State.removalFeeExcluded ? 0 : removalFee);
+
+        const firstRbPrice = totalSumFromQuickQuote * mulTimes;
+        const disRbPriceValue = firstRbPrice * (1 - (discount / 100));
+        const disRbPrice = Math.round(disRbPriceValue * 100) / 100;
+
+        const sumPrice = acceSum + eAcceSum + surchargeFee + disRbPrice;
+
+        return {
+            totalSumForRbTime: totalSumFromQuickQuote,
+            wifiSum,
+            deliveryFee,
+            installFee,
+            removalFee,
+            firstRbPrice,
+            disRbPrice,
+            sumPrice
+        };
+    }
 }
