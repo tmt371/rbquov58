@@ -227,21 +227,15 @@ class App {
             this.uiManager.render(state);
         });
 
-        this.eventAggregator.subscribe('welcomeDialogConfirmed', () => {
-            this.uiManager._adjustLeftPanelLayout();
-            // [FIX] Use a setTimeout to ensure the DOM has been fully updated
-            // after the dialog closes before we attempt to set focus.
-            setTimeout(() => {
-                this.eventAggregator.publish('focusCell', { rowIndex: 0, column: 'width' });
-            }, 50); // A small delay is sufficient.
-        });
-        
         this.appController.publishInitialState(); 
         
         this.inputHandler = new InputHandler(this.eventAggregator);
         this.inputHandler.initialize(); 
 
-        this.eventAggregator.publish('showWelcomeDialog');
+        // Set initial focus after a short delay to ensure the UI is ready.
+        setTimeout(() => {
+            this.eventAggregator.publish('focusCell', { rowIndex: 0, column: 'width' });
+        }, 100);
         
         console.log("Application running and interactive.");
     }

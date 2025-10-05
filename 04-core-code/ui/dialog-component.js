@@ -20,48 +20,6 @@ export class DialogComponent {
     }
 
     initialize() {
-        this.eventAggregator.subscribe('showWelcomeDialog', () => {
-            this.show({
-                message: 'What is the cost discount percentage for this quote?',
-                layout: [
-                    [
-                        { 
-                            type: 'input', 
-                            id: 'dialog-input-cost-dis',
-                            placeholder: 'Enter a whole number between 0 and 100',
-                            colspan: 3 
-                        }
-                    ],
-                    [
-                        { 
-                            type: 'button', 
-                            text: 'Confirm',
-                            colspan: 3,
-                            className: 'primary-confirm-button', // Add a class to identify the confirm button
-                            callback: () => {
-                                const inputElement = document.getElementById('dialog-input-cost-dis');
-                                const value = inputElement.value;
-                                const percentage = parseInt(value, 10);
-
-                                if (value === '' || isNaN(percentage) || percentage < 0 || percentage > 100) {
-                                    this.eventAggregator.publish('showNotification', { 
-                                        message: 'Invalid input. Please enter a whole number between 0 and 100.',
-                                        type: 'error' 
-                                    });
-                                    // By returning false, we prevent the dialog from closing on invalid input.
-                                    return false;
-                                } else {
-                                    this.eventAggregator.publish('costDiscountEntered', { percentage });
-                                    this.eventAggregator.publish('welcomeDialogConfirmed');
-                                    return true; // Indicate success, allowing the dialog to close.
-                                }
-                            }
-                        }
-                    ]
-                ]
-            });
-        });
-
         this.eventAggregator.subscribe('showLoadConfirmationDialog', () => {
             this.show({
                 message: 'The current quote contains unsaved data. What would you like to do?',
