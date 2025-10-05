@@ -11,7 +11,7 @@
 }
 #left-panel {
     position: fixed;
-    left: 0;
+    left: 0; 
     /* [REMOVED] The fixed width is removed to allow dynamic sizing by JavaScript. */
     /* width: 400px; */
     background-color: var(--k1-bg-color);
@@ -29,14 +29,12 @@
 #left-panel.is-expanded {
     transform: translateX(0);
 }
-
-/* [REFACTORED] Decoupled toggle from the panel for persistent visibility */
 #left-panel-toggle {
-    position: fixed; /* Changed from absolute to fixed */
-    top: 50%; /* Position vertically centered */
-    left: 0; /* Align to the left edge of the viewport */
-    transform: translateY(-50%); /* Fine-tune vertical centering */
+    position: absolute;
+    top: 50%;
     width: 24px;
+    right: -24px; 
+    transform: translateY(-50%);
     height: 80px;
     background-color: #e5e7eb;
     border: 1px solid var(--panel-border-color);
@@ -46,16 +44,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 101; /* Ensure it's above the panel */
-    transition: transform 0.3s ease-in-out;
 }
-
-#left-panel.is-expanded + #left-panel-toggle {
-    /* When the panel is expanded, move the toggle to its right edge */
-    transform: translateY(-50%) translateX(var(--left-panel-width, 400px));
-    /* We use a CSS variable here that JS will set */
-}
-
 .tab-container { display: flex; flex-shrink: 0; background-color: #d1d5db; }
 .tab-button {
     height: 30px; flex-grow: 1; border: none; background-color: transparent; cursor: pointer;

@@ -22,6 +22,23 @@ export class DriveAccessoriesView {
         const newMode = currentMode === mode ? null : mode;
 
         if (currentMode) {
+            switch (currentMode) {
+                case 'winder':
+                    this._calculateAndStoreWinderCost();
+                    break;
+                case 'motor':
+                    this._calculateAndStoreMotorCost();
+                    break;
+                case 'remote':
+                    this._calculateAndStoreRemoteCost();
+                    break;
+                case 'charger':
+                    this._calculateAndStoreChargerCost();
+                    break;
+                case 'cord':
+                    this._calculateAndStoreCordCost();
+                    break;
+            }
             this.recalculateAllDriveAccessoryPrices();
         }
         
@@ -45,6 +62,85 @@ export class DriveAccessoriesView {
         }
 
         this.publish();
+    }
+
+    _calculateAndStoreWinderCost() {
+        const items = this.quoteService.getItems();
+        const count = items.filter(item => item.winder === 'HD').length;
+        if (count > 0) {
+            const totalCost = this.calculationService.calculateAccessoryPrice(
+                this.quoteService.getCurrentProductType(),
+                'winder',
+                { count: count, costKey: 'cost-winder' }
+            );
+            this.quoteService.updateWinderCostSum(totalCost);
+        } else {
+            this.quoteService.updateWinderCostSum(null);
+        }
+    }
+
+    _calculateAndStoreMotorCost() {
+        const items = this.quoteService.getItems();
+        const count = items.filter(item => !!item.motor).length;
+        if (count > 0) {
+            const totalCost = this.calculationService.calculateAccessoryPrice(
+                this.quoteService.getCurrentProductType(),
+                'motor',
+                { count: count, costKey: 'cost-motor' }
+            );
+            this.quoteService.updateMotorCostSum(totalCost);
+        } else {
+            this.quoteService.updateMotorCostSum(null);
+        }
+    }
+
+    _calculateAndStoreRemoteCost() {
+        const state = this.uiService.getState();
+        const remoteCount = state.driveRemoteCount;
+        
+        // [REFACTOR] Since the user no longer selects a specific remote, use a hardcoded default for cost calculation.
+        const defaultRemoteCostKey = 'cost-A-1ch-remote';
+
+        if (remoteCount > 0) {
+            const totalCost = this.calculationService.calculateAccessoryPrice(
+                this.quoteService.getCurrentProductType(),
+                'remote',
+                { count: remoteCount, costKey: defaultRemoteCostKey }
+            );
+            this.quoteService.updateRemoteCostSum(totalCost);
+        } else {
+            this.quoteService.updateRemoteCostSum(null);
+        }
+    }
+
+    _calculateAndStoreChargerCost() {
+        const state = this.uiService.getState();
+        const count = state.driveChargerCount;
+        if (count > 0) {
+            const totalCost = this.calculationService.calculateAccessoryPrice(
+                this.quoteService.getCurrentProductType(),
+                'charger',
+                { count: count, costKey: 'cost-charger' }
+            );
+            this.quoteService.updateChargerCostSum(totalCost);
+        } else {
+            this.quoteService.updateChargerCostSum(null);
+        }
+    }
+
+    _calculateAndStoreCordCost() {
+        const state = this.uiService.getState();
+        const count = state.driveCordCount;
+        if (count > 0) {
+            const totalCost = this.calculationService.calculateAccessoryPrice(
+                this.quoteService.getCurrentProductType(),
+                'cord',
+                { count: count, costKey: 'cost-3mcord' }
+            );
+            this.quoteService.updateCordCostSum(totalCost);
+        } else {
+            this.quoteService.updateCordCostSum(null);
+        }
     }
 
     handleTableCellClick({ rowIndex, column }) {
@@ -177,13 +273,13 @@ export class DriveAccessoriesView {
         grandTotal += cordPrice;
 
         this.uiService.setDriveGrandTotal(grandTotal);
-        this.quoteService.updateAccessorySummary({
-            winderCostSum: winderPrice,
-            motorCostSum: motorPrice,
-            remoteCostSum: remotePrice,
-            chargerCostSum: chargerPrice,
-            cordCostSum: cordPrice
-        });
+        this.quoteService.updateAccessorySummary(summaryData);
+        
+        this.uiService.setSummaryWinderPrice(winderPrice);
+        this.uiService.setSummaryMotorPrice(motorPrice);
+        this.uiService.setSummaryRemotePrice(remotePrice);
+        this.uiService.setSummaryChargerPrice(chargerPrice);
+        this.uiService.setSummaryCordPrice(cordPrice);
     }
 
     _getHintMessage(mode) {

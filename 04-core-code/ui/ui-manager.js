@@ -12,7 +12,7 @@ export class UIManager {
     constructor(appElement, eventAggregator, calculationService) {
         this.appElement = appElement;
         this.eventAggregator = eventAggregator;
-        this.calculationService = calculationService;
+        this.calculationService = calculationService; // [NEW] Store service
 
         this.numericKeyboardPanel = document.getElementById('numeric-keyboard-panel');
         this.insertButton = document.getElementById('key-insert');
@@ -40,7 +40,7 @@ export class UIManager {
         this.rightPanelComponent = new RightPanelComponent(
             document.getElementById('function-panel'),
             this.eventAggregator,
-            this.calculationService
+            this.calculationService // [NEW] Pass service down
         );
 
         this.notificationComponent = new NotificationComponent({
@@ -54,60 +54,33 @@ export class UIManager {
         });
 
         this.initialize();
+        this._initializeLeftPanelLayout();
     }
 
     initialize() {
         this.eventAggregator.subscribe('userToggledNumericKeyboard', () => this._toggleNumericKeyboard());
-        this._initializeResizeObserver();
-    }
-
-    _initializeResizeObserver() {
-        const resizeObserver = new ResizeObserver(() => {
-            if (this.leftPanelElement.classList.contains('is-expanded')) {
-                this._updateExpandedPanelPosition();
-            }
-        });
-        // Observe the main app container for size changes, which will affect our panel's relative position.
-        resizeObserver.observe(this.appElement);
-    }
-
-    _updateExpandedPanelPosition() {
-        if (!this.leftPanelElement || !this.numericKeyboardPanel) return;
-
-        const keyboardToggle = this.numericKeyboardPanel.querySelector('#panel-toggle');
-        const typeKey = this.numericKeyboardPanel.querySelector('#key-type');
-
-        if (!keyboardToggle || !typeKey) {
-            console.error("One or more reference elements for panel positioning are missing.");
-            return;
-        }
-
-        const keyboardToggleRect = keyboardToggle.getBoundingClientRect();
-        const typeKeyRect = typeKey.getBoundingClientRect();
-        const viewportHeight = window.innerHeight;
-
-        const newTop = keyboardToggleRect.bottom;
-        const newWidth = typeKeyRect.left + (typeKeyRect.width / 2);
-        const newHeight = viewportHeight - newTop;
-
-        this.leftPanelElement.style.top = `${newTop}px`;
-        this.leftPanelElement.style.width = `${newWidth}px`;
-        this.leftPanelElement.style.height = `${newHeight}px`;
-
-        // [NEW] Set the CSS variable for the toggle's transform
-        this.leftPanelElement.style.setProperty('--left-panel-width', `${newWidth}px`);
     }
 
     render(state) {
         const isDetailView = state.ui.currentView === 'DETAIL_CONFIG';
         this.appElement.classList.toggle('detail-view-active', isDetailView);
 
+        // [NEW] Get the current product's data based on the new state structure.
         const currentProductKey = state.quoteData.currentProduct;
         const currentProductData = state.quoteData.products[currentProductKey];
 
+        // The table component receives the full state and is responsible for extracting the items list itself.
+        // This will be modified in the table-component.js file.
         this.tableComponent.render(state);
+
+        // [REFACTORED] Pass the product-specific summary to the summary component.
         this.summaryComponent.render(currentProductData.summary, state.ui.isSumOutdated);
+
+        // The left panel component also receives the full state objects.
+        // It will be modified internally to read from the new structure.
         this.leftPanelComponent.render(state.ui, state.quoteData);
+        
+        // [MODIFIED] Pass the full state object to the right panel component.
         this.rightPanelComponent.render(state);
         
         this._updateButtonStates(state);
@@ -115,20 +88,70 @@ export class UIManager {
         this._scrollToActiveCell(state);
     }
 
+    _adjustLeftPanelLayout() {
+        const leftPanel = this.leftPanelElement;
+        const appContainer = this.appElement;
+        const numericKeyboard = this.numericKeyboardPanel;
+
+        if (!leftPanel || !appContainer || !numericKeyboard) {
+            console.error("Layout adjustment aborted: One or more critical elements not found.");
+            return;
+        }
+
+        const isKeyboardCollapsed = numericKeyboard.classList.contains('is-collapsed');
+
+        // [BUG FIX] The entire layout calculation should ONLY run when the keyboard is visible.
+        if (!isKeyboardCollapsed) {
+            const key7 = document.getElementById('key-7');
+            const key0 = document.getElementById('key-0');
+            const typeKey = document.getElementById('key-type');
+            if (!key7 || !key0 || !typeKey) {
+                console.error("Precision mode aborted: One or more keypad keys not found.");
+                return; 
+            }
+
+            const key7Rect = key7.getBoundingClientRect();
+            const key0Rect = key0.getBoundingClientRect();
+            const typeKeyRect = typeKey.getBoundingClientRect();
+
+            if (key7Rect.width > 0) {
+                const dynamicTop = key7Rect.top;
+                const dynamicHeight = key0Rect.bottom - key7Rect.top;
+                const dynamicWidth = typeKeyRect.left + (typeKeyRect.width / 2);
+                
+                leftPanel.style.top = `${dynamicTop}px`;
+                leftPanel.style.height = `${dynamicHeight}px`;
+                leftPanel.style.width = `${dynamicWidth}px`;
+            } else {
+                console.warn("Keys have no width, precision layout skipped.");
+            }
+        }
+    }
+
+    _initializeLeftPanelLayout() {
+        const resizeObserver = new ResizeObserver(() => {
+            if (this.leftPanelElement.classList.contains('is-expanded')) {
+                this._adjustLeftPanelLayout();
+            }
+        });
+        resizeObserver.observe(this.appElement);
+    }
+    
     _updateLeftPanelState(currentView) {
         if (this.leftPanelElement) {
             const isExpanded = (currentView === 'DETAIL_CONFIG');
-            this.leftPanelElement.classList.toggle('is-expanded', isExpanded);
-
+            
             if (isExpanded) {
-                // Use setTimeout to ensure the panel is visible and transition has started before calculating.
-                setTimeout(() => this._updateExpandedPanelPosition(), 0);
+                this._adjustLeftPanelLayout();
             }
+            
+            this.leftPanelElement.classList.toggle('is-expanded', isExpanded);
         }
     }
 
     _updateButtonStates(state) {
         const { selectedRowIndex, isMultiSelectMode, multiSelectSelectedIndexes } = state.ui;
+        // [REFACTORED] Get items from the correct location in the new state structure.
         const currentProductKey = state.quoteData.currentProduct;
         const items = state.quoteData.products[currentProductKey].items;
 

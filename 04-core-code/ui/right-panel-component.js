@@ -65,17 +65,11 @@ export class RightPanelComponent {
                 button.addEventListener('click', () => this.eventAggregator.publish(eventName));
             }
         }
-
-        // Add listener for the new clickable remote quantity div
-        const remote1chQtyDiv = this.f1.inputs['remote-1ch'];
-        if (remote1chQtyDiv) {
-            remote1chQtyDiv.addEventListener('click', () => this.eventAggregator.publish('userRequestedRemoteDistribution'));
-        }
     }
 
     _initializeF1InputListeners() {
         // Only listen to the inputs that are still manually editable
-        const manualInputs = ['dual-combo', 'slim'];
+        const manualInputs = ['remote-1ch', 'dual-combo', 'slim'];
         manualInputs.forEach(key => {
             const inputElement = this.f1.inputs[key];
             if (inputElement) {
@@ -235,117 +229,57 @@ export class RightPanelComponent {
 
         const items = state.quoteData.products.rollerBlind.items;
         const uiState = state.ui;
-        const formatPrice = (price) => (price > 0 ? `$${price.toFixed(2)}` : '');
 
-        // --- Handle Linked Items (Winder, Motor, Charger, Cord) ---
         const linkedQuantities = {
             winder: items.filter(item => item.winder === 'HD').length,
             motor: items.filter(item => !!item.motor).length,
+            'remote-16ch': uiState.driveRemoteCount, // Assuming K4 remote count is for 16ch
             charger: uiState.driveChargerCount,
             '3m-cord': uiState.driveCordCount
         };
 
-        const multipliers = { winder: 8, motor: 160, charger: 25, '3m-cord': 5 };
-        this.f1LinkedPrices = {};
+        const multipliers = {
+            winder: 8, motor: 160, 'remote-16ch': 70, charger: 25, '3m-cord': 5
+        };
+
+        this.f1LinkedPrices = {}; // [FIX] Reset linked prices on each render
 
         for (const [key, qty] of Object.entries(linkedQuantities)) {
             if (this.f1.displays.qty[key]) {
                 this.f1.displays.qty[key].textContent = qty || '0';
             }
             const price = (qty || 0) * (multipliers[key] || 0);
-            this.f1LinkedPrices[key] = price;
+            this.f1LinkedPrices[key] = price; // [FIX] Store linked prices
             if (this.f1.displays.price[key]) {
-                this.f1.displays.price[key].textContent = formatPrice(price);
+                this.f1.displays.price[key].textContent = price > 0 ? `$${price.toFixed(2)}` : '';
             }
         }
-
-        // --- Handle Remote Distribution ---
-        const totalRemoteQty = uiState.driveRemoteCount || 0;
-        let qty1ch = uiState.f1_remote_1ch_qty;
-        let qty16ch = uiState.f1_remote_16ch_qty;
-
-        // Initialize distribution if not set
-        if (qty16ch === null) {
-            qty1ch = 0;
-            qty16ch = totalRemoteQty;
-            // We don't directly modify state here, just for rendering.
-            // The dialog confirmation will set the state permanently.
-        }
-
-        // Render quantities
-        if (this.f1.inputs['remote-1ch']) {
-            this.f1.inputs['remote-1ch'].textContent = qty1ch;
-        }
-        if (this.f1.displays.qty['remote-16ch']) {
-            this.f1.displays.qty['remote-16ch'].textContent = qty16ch;
-        }
-
-        // Calculate and render prices using the service for consistency
-        const price1ch = this.calculationService.calculateF1ComponentPrice('remote-1ch', qty1ch);
-        const price16ch = this.calculationService.calculateF1ComponentPrice('remote-16ch', qty16ch);
-
-        if (this.f1.displays.price['remote-1ch']) {
-            this.f1.displays.price['remote-1ch'].textContent = formatPrice(price1ch);
-        }
-        if (this.f1.displays.price['remote-16ch']) {
-            this.f1.displays.price['remote-16ch'].textContent = formatPrice(price16ch);
-        }
-
-        // Add remote prices to the linked prices for total calculation
-        this.f1LinkedPrices['remote-1ch'] = price1ch;
-        this.f1LinkedPrices['remote-16ch'] = price16ch;
 
         this._updateF1Total();
     }
 
-    _renderF2Tab(state) {
-        if (!state || !state.ui.f2 || !this.f2.b2_winderPrice) return;
+    _renderF2Tab(uiState) {
+        if (!uiState || !uiState.f2 || !this.f2.b2_winderPrice) return;
         
-        const f2State = state.ui.f2;
-        const productSummary = state.quoteData.products[state.quoteData.currentProduct]?.summary;
-        const accessories = productSummary?.accessories || {};
-
+        const f2State = uiState.f2;
         const formatIntegerCurrency = (value) => (typeof value === 'number') ? `$${value.toFixed(0)}` : '$';
         const formatDecimalCurrency = (value) => (typeof value === 'number') ? `$${value.toFixed(2)}` : '$';
         const formatValue = (value) => (value !== null && value !== undefined) ? value : '';
 
-        // Read accessory prices directly from the quoteData summary object.
-        const winderPrice = accessories.winderCostSum || 0;
-        const dualPrice = accessories.dualCostSum || 0;
-        const motorPrice = accessories.motorCostSum || 0;
-        const remotePrice = accessories.remoteCostSum || 0;
-        const chargerPrice = accessories.chargerCostSum || 0;
-        const cordPrice = accessories.cordCostSum || 0;
+        this.f2.b2_winderPrice.textContent = formatIntegerCurrency(uiState.summaryWinderPrice);
+        this.f2.b3_dualPrice.textContent = formatIntegerCurrency(uiState.dualPrice);
+        this.f2.b6_motorPrice.textContent = formatIntegerCurrency(uiState.summaryMotorPrice);
+        this.f2.b7_remotePrice.textContent = formatIntegerCurrency(uiState.summaryRemotePrice);
+        this.f2.b8_chargerPrice.textContent = formatIntegerCurrency(uiState.summaryChargerPrice);
+        this.f2.b9_cordPrice.textContent = formatIntegerCurrency(uiState.summaryCordPrice);
 
-        // Render accessory prices.
-        this.f2.b2_winderPrice.textContent = formatIntegerCurrency(winderPrice);
-        this.f2.b3_dualPrice.textContent = formatIntegerCurrency(dualPrice);
-        this.f2.b6_motorPrice.textContent = formatIntegerCurrency(motorPrice);
-        this.f2.b7_remotePrice.textContent = formatIntegerCurrency(remotePrice);
-        this.f2.b8_chargerPrice.textContent = formatIntegerCurrency(chargerPrice);
-        this.f2.b9_cordPrice.textContent = formatIntegerCurrency(cordPrice);
-
-        // Re-calculate summary values locally for rendering purposes.
-        const wifiSum = f2State.wifiSum || 0;
-        const deliveryFee = f2State.deliveryFee || 0;
-        const installFee = f2State.installFee || 0;
-        const removalFee = f2State.removalFee || 0;
-
-        const acceSum = winderPrice + dualPrice;
-        const eAcceSum = motorPrice + remotePrice + chargerPrice + cordPrice + wifiSum;
-        const surchargeFee =
-            (f2State.deliveryFeeExcluded ? 0 : deliveryFee) +
-            (f2State.installFeeExcluded ? 0 : installFee) +
-            (f2State.removalFeeExcluded ? 0 : removalFee);
-
-        // Render calculated summaries and fees.
-        this.f2.b4_acceSum.textContent = formatIntegerCurrency(acceSum);
-        this.f2.c10_wifiSum.textContent = formatIntegerCurrency(wifiSum);
-        this.f2.b11_eAcceSum.textContent = formatIntegerCurrency(eAcceSum);
-        this.f2.c13_deliveryFee.textContent = formatIntegerCurrency(deliveryFee);
-        this.f2.c14_installFee.textContent = formatIntegerCurrency(installFee);
-        this.f2.c15_removalFee.textContent = formatIntegerCurrency(removalFee);
-        this.f2.b16_surchargeFee.textContent = formatIntegerCurrency(surchargeFee);
+        this.f2.b4_acceSum.textContent = formatIntegerCurrency(f2State.acceSum);
+        this.f2.c10_wifiSum.textContent = formatIntegerCurrency(f2State.wifiSum);
+        this.f2.b11_eAcceSum.textContent = formatIntegerCurrency(f2State.eAcceSum);
+        this.f2.c13_deliveryFee.textContent = formatIntegerCurrency(f2State.deliveryFee);
+        this.f2.c14_installFee.textContent = formatIntegerCurrency(f2State.installFee);
+        this.f2.c15_removalFee.textContent = formatIntegerCurrency(f2State.removalFee);
+        this.f2.b16_surchargeFee.textContent = formatIntegerCurrency(f2State.surchargeFee);
         
         this.f2.a17_totalSum.textContent = formatValue(f2State.totalSumForRbTime);
         this.f2.c17_1stRbPrice.textContent = formatDecimalCurrency(f2State.firstRbPrice);

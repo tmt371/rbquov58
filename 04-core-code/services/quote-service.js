@@ -36,15 +36,6 @@ export class QuoteService {
         const productKey = this._getCurrentProductKey();
         return this.quoteData.products[productKey];
     }
-
-    /**
-     * Gets the summary object for the currently active product.
-     * @private
-     */
-    _getCurrentProductSummary() {
-        const productData = this._getCurrentProductData();
-        return productData ? productData.summary : null;
-    }
     
     // --- Public API ---
 
@@ -145,9 +136,45 @@ export class QuoteService {
     }
     
     updateAccessorySummary(data) {
-        const summary = this._getCurrentProductSummary();
-        if (data && summary && summary.accessories) {
-            Object.assign(summary.accessories, data);
+        const productSummary = this._getCurrentProductData()?.summary;
+        if (data && productSummary && productSummary.accessories) {
+            Object.assign(productSummary.accessories, data);
+        }
+    }
+
+    // [REFACTORED] All cost sum updates now target the nested summary object.
+    updateRemoteCostSum(cost) {
+        const accessories = this._getCurrentProductData()?.summary?.accessories;
+        if (accessories) {
+            accessories.remoteCostSum = cost;
+        }
+    }
+
+    updateWinderCostSum(cost) {
+        const accessories = this._getCurrentProductData()?.summary?.accessories;
+        if (accessories) {
+            accessories.winderCostSum = cost;
+        }
+    }
+
+    updateMotorCostSum(cost) {
+        const accessories = this._getCurrentProductData()?.summary?.accessories;
+        if (accessories) {
+            accessories.motorCostSum = cost;
+        }
+    }
+
+    updateChargerCostSum(cost) {
+        const accessories = this._getCurrentProductData()?.summary?.accessories;
+        if (accessories) {
+            accessories.chargerCostSum = cost;
+        }
+    }
+
+    updateCordCostSum(cost) {
+        const accessories = this._getCurrentProductData()?.summary?.accessories;
+        if (accessories) {
+            accessories.cordCostSum = cost;
         }
     }
 

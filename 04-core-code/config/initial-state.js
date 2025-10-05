@@ -28,11 +28,7 @@ export const initialState = {
         k5MotorTotalPrice: null,
         k5RemoteTotalPrice: null,
         k5ChargerTotalPrice: null,
-        k5CordTotalPrice: null,
-
-        // --- F1 Remote Distribution ---
-        f1_remote_1ch_qty: 0,
-        f1_remote_16ch_qty: null
+        k5CordTotalPrice: null
     },
     quoteData: {
         // [NEW] Added to track the active product.
