@@ -1,7 +1,5 @@
 // File: 04-core-code/left-panel-input-handler.js
 
-import { addSafeEventListener } from '../utils/event-handler.js';
-
 /**
  * @fileoverview A dedicated input handler for all user interactions within the Left Panel.
  */
@@ -23,26 +21,32 @@ export class LeftPanelInputHandler {
 
     _setupNavigationToggle() {
         const leftPanelToggle = document.getElementById('left-panel-toggle');
-        addSafeEventListener(leftPanelToggle, () => {
-            this.eventAggregator.publish('userNavigatedToDetailView');
-        });
+        if (leftPanelToggle) {
+            leftPanelToggle.addEventListener('click', () => {
+                this.eventAggregator.publish('userNavigatedToDetailView');
+            });
+        }
     }
 
     _setupTabButtons() {
         const tabContainer = document.querySelector('#left-panel .tab-container');
-        addSafeEventListener(tabContainer, (event) => {
-            const target = event.target.closest('.tab-button');
-            if (target && !target.disabled) {
-                this.eventAggregator.publish('userSwitchedTab', { tabId: target.id });
-            }
-        });
+        if (tabContainer) {
+            tabContainer.addEventListener('click', (event) => {
+                const target = event.target.closest('.tab-button');
+                if (target && !target.disabled) {
+                    this.eventAggregator.publish('userSwitchedTab', { tabId: target.id });
+                }
+            });
+        }
     }
 
     _setupK1Inputs() {
         const locationButton = document.getElementById('btn-focus-location');
-        addSafeEventListener(locationButton, () => {
-            this.eventAggregator.publish('userRequestedFocusMode', { column: 'location' });
-        });
+        if (locationButton) {
+            locationButton.addEventListener('click', () => {
+                this.eventAggregator.publish('userRequestedFocusMode', { column: 'location' });
+            });
+        }
 
         const locationInput = document.getElementById('location-input-box');
         if (locationInput) {
@@ -59,17 +63,23 @@ export class LeftPanelInputHandler {
 
     _setupK2Inputs() {
         const fabricButton = document.getElementById('btn-focus-fabric');
-        addSafeEventListener(fabricButton, () => {
-            this.eventAggregator.publish('userRequestedFocusMode', { column: 'fabric' });
-        });
+        if (fabricButton) {
+            fabricButton.addEventListener('click', () => {
+                this.eventAggregator.publish('userRequestedFocusMode', { column: 'fabric' });
+            });
+        }
         const lfButton = document.getElementById('btn-light-filter');
-        addSafeEventListener(lfButton, () => {
-            this.eventAggregator.publish('userRequestedLFEditMode');
-        });
+        if (lfButton) {
+            lfButton.addEventListener('click', () => {
+                this.eventAggregator.publish('userRequestedLFEditMode');
+            });
+        }
         const lfDelButton = document.getElementById('btn-lf-del');
-        addSafeEventListener(lfDelButton, () => {
-            this.eventAggregator.publish('userRequestedLFDeleteMode');
-        });
+        if (lfDelButton) {
+            lfDelButton.addEventListener('click', () => {
+                this.eventAggregator.publish('userRequestedLFDeleteMode');
+            });
+        }
 
         const batchTable = document.getElementById('fabric-batch-table');
         if (batchTable) {
@@ -98,15 +108,19 @@ export class LeftPanelInputHandler {
 
     _setupK3Inputs() {
         const editButton = document.getElementById('btn-k3-edit');
-        addSafeEventListener(editButton, () => {
-            this.eventAggregator.publish('userToggledK3EditMode');
-        });
+        if (editButton) {
+            editButton.addEventListener('click', () => {
+                this.eventAggregator.publish('userToggledK3EditMode');
+            });
+        }
 
         const setupBatchCycleButton = (buttonId, column) => {
             const button = document.getElementById(buttonId);
-            addSafeEventListener(button, () => {
-                this.eventAggregator.publish('userRequestedBatchCycle', { column });
-            });
+            if (button) {
+                button.addEventListener('click', () => {
+                    this.eventAggregator.publish('userRequestedBatchCycle', { column });
+                });
+            }
         };
         setupBatchCycleButton('btn-batch-cycle-over', 'over');
         setupBatchCycleButton('btn-batch-cycle-oi', 'oi');
@@ -116,9 +130,11 @@ export class LeftPanelInputHandler {
     _setupK4Inputs() {
         const setupK4Button = (buttonId, mode) => {
             const button = document.getElementById(buttonId);
-            addSafeEventListener(button, () => {
-                this.eventAggregator.publish('dualChainModeChanged', { mode });
-            });
+            if (button) {
+                button.addEventListener('click', () => {
+                    this.eventAggregator.publish('dualChainModeChanged', { mode });
+                });
+            }
         };
         setupK4Button('btn-k4-dual', 'dual');
         setupK4Button('btn-k4-chain', 'chain');
@@ -139,9 +155,13 @@ export class LeftPanelInputHandler {
     _setupK5Inputs() {
         const setupK5ModeButton = (buttonId, mode) => {
             const button = document.getElementById(buttonId);
-            addSafeEventListener(button, () => {
-                this.eventAggregator.publish('driveModeChanged', { mode });
-            });
+            if (button) {
+                // [REFACTOR] Removed special handling for the remote button.
+                // It now fires a standard 'driveModeChanged' event, same as other accessory buttons.
+                button.addEventListener('click', () => {
+                    this.eventAggregator.publish('driveModeChanged', { mode });
+                });
+            }
         };
         setupK5ModeButton('btn-k5-winder', 'winder');
         setupK5ModeButton('btn-k5-motor', 'motor');
@@ -151,9 +171,11 @@ export class LeftPanelInputHandler {
 
         const setupK5CounterButton = (buttonId, accessory, direction) => {
             const button = document.getElementById(buttonId);
-            addSafeEventListener(button, () => {
-                this.eventAggregator.publish('accessoryCounterChanged', { accessory, direction });
-            });
+            if (button) {
+                button.addEventListener('click', () => {
+                    this.eventAggregator.publish('accessoryCounterChanged', { accessory, direction });
+                });
+            }
         };
         setupK5CounterButton('btn-k5-remote-add', 'remote', 'add');
         setupK5CounterButton('btn-k5-remote-subtract', 'remote', 'subtract');

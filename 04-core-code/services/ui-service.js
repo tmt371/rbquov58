@@ -304,6 +304,11 @@ export class UIService {
         this.state.summaryAccessoriesTotal = value;
     }
 
+    setF1RemoteDistribution(qty1, qty16) {
+        this.state.f1_remote_1ch_qty = qty1;
+        this.state.f1_remote_16ch_qty = qty16;
+    }
+
     setF2Value(key, value) {
         if (this.state.f2.hasOwnProperty(key)) {
             this.state.f2[key] = value;

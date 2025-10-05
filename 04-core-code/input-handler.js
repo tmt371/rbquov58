@@ -1,7 +1,6 @@
 // File: 04-core-code/input-handler.js
 
 import { LeftPanelInputHandler } from './left-panel-input-handler.js';
-import { addSafeEventListener } from '../utils/event-handler.js';
 
 export class InputHandler {
     constructor(eventAggregator) {
@@ -25,6 +24,7 @@ export class InputHandler {
 
     _setupPhysicalKeyboard() {
         window.addEventListener('keydown', (event) => {
+            // BUG FIX: Broaden the guard clause to ignore all non-readonly inputs
             if (event.target.matches('input:not([readonly])')) {
                 return;
             }
@@ -87,17 +87,21 @@ export class InputHandler {
     
     _setupPanelToggles() {
         const numericToggle = document.getElementById('panel-toggle');
-        addSafeEventListener(numericToggle, () => {
-            this.eventAggregator.publish('userToggledNumericKeyboard');
-        });
+        if (numericToggle) {
+            numericToggle.addEventListener('click', () => {
+                this.eventAggregator.publish('userToggledNumericKeyboard');
+            });
+        }
     }
 
     _setupFunctionKeys() {
         const setupButton = (id, eventName) => {
             const button = document.getElementById(id);
-            addSafeEventListener(button, () => {
-                this.eventAggregator.publish(eventName);
-            });
+            if (button) {
+                button.addEventListener('click', () => {
+                    this.eventAggregator.publish(eventName);
+                });
+            }
         };
 
         setupButton('key-insert', 'userRequestedInsertRow');
@@ -106,12 +110,16 @@ export class InputHandler {
         setupButton('key-export', 'userRequestedExportCSV');
         setupButton('key-reset', 'userRequestedReset');
         setupButton('key-m-sel', 'userToggledMultiSelectMode');
+
+        // [NEW] Added event listener for the new T-Set button
         setupButton('key-t-set', 'userRequestedMultiTypeSet');
 
         const loadButton = document.getElementById('key-load');
-        addSafeEventListener(loadButton, () => {
-            this.eventAggregator.publish('userRequestedLoad');
-        });
+        if (loadButton) {
+            loadButton.addEventListener('click', () => {
+                this.eventAggregator.publish('userRequestedLoad');
+            });
+        }
     }
     
     _setupNumericKeyboard() {
@@ -148,7 +156,7 @@ export class InputHandler {
                 if (id === 'key-type') {
                     addLongPressSupport(button, 'typeButtonLongPressed', 'userRequestedCycleType', data);
                 } else {
-                    addSafeEventListener(button, () => {
+                    button.addEventListener('click', () => {
                         this.eventAggregator.publish(eventName, data);
                     });
                 }
@@ -199,7 +207,7 @@ export class InputHandler {
             table.addEventListener('mouseleave', endPress, true);
             table.addEventListener('touchend', endPress);
 
-            addSafeEventListener(table, (event) => {
+            table.addEventListener('click', (event) => {
                 if(this.isLongPress) return;
 
                 const target = event.target;

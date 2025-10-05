@@ -136,8 +136,10 @@ export class DialogComponent {
                     input.id = cellConfig.id;
                     input.type = 'number';
                     input.placeholder = cellConfig.placeholder || '';
+                    if (cellConfig.value !== undefined) {
+                        input.value = cellConfig.value;
+                    }
                     input.min = 0;
-                    input.max = 100;
                     
                     // [NEW] Add event listener for Enter key confirmation
                     input.addEventListener('keydown', (event) => {

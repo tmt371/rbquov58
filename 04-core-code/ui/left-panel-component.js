@@ -112,7 +112,7 @@ export class LeftPanelComponent {
     _updatePanelButtonStates(uiState, quoteData) {
         const { 
             activeEditMode, locationInputValue, lfModifiedRowIndexes, 
-            dualChainMode, dualPrice, targetCell, dualChainInputValue,
+            dualChainMode, targetCell, dualChainInputValue,
             driveAccessoryMode, driveRemoteCount, driveChargerCount, driveCordCount,
             driveWinderTotalPrice, driveMotorTotalPrice, driveRemoteTotalPrice, driveChargerTotalPrice, driveCordTotalPrice,
             driveGrandTotal,
@@ -120,9 +120,10 @@ export class LeftPanelComponent {
             summaryRemotePrice, summaryChargerPrice, summaryCordPrice, summaryAccessoriesTotal
         } = uiState;
         
-        // [REFACTORED] Get items from the correct location in the new state structure.
         const currentProductKey = quoteData.currentProduct;
-        const items = quoteData.products[currentProductKey].items;
+        const productData = quoteData.products[currentProductKey];
+        const items = productData.items;
+        const accessoriesSummary = productData.summary.accessories || {};
 
         // --- K1 Location Input State ---
         if (this.locationInput) {
@@ -231,6 +232,7 @@ export class LeftPanelComponent {
             }
         }
         if (this.k5DualPriceValue) {
+            const dualPrice = accessoriesSummary.dualCostSum;
             const newText = (typeof dualPrice === 'number') ? `$${dualPrice.toFixed(0)}` : '';
             if (this.k5DualPriceValue.textContent !== newText) {
                 this.k5DualPriceValue.textContent = newText;
