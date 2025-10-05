@@ -160,11 +160,11 @@ export class DualChainView {
         const state = this.uiService.getState();
         
         const dualPrice = state.dualPrice || 0;
-        const winderPrice = state.driveWinderTotalPrice || 0;
-        const motorPrice = state.driveMotorTotalPrice || 0;
-        const remotePrice = state.driveRemoteTotalPrice || 0;
-        const chargerPrice = state.driveChargerTotalPrice || 0;
-        const cordPrice = state.driveCordTotalPrice || 0;
+        const winderPrice = state.summaryWinderPrice || 0;
+        const motorPrice = state.summaryMotorPrice || 0;
+        const remotePrice = state.summaryRemotePrice || 0;
+        const chargerPrice = state.summaryChargerPrice || 0;
+        const cordPrice = state.summaryCordPrice || 0;
 
         const total = dualPrice + winderPrice + motorPrice + remotePrice + chargerPrice + cordPrice;
         
