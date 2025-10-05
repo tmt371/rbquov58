@@ -79,8 +79,7 @@ export class DualChainView {
         }
         
         const price = this.calculationService.calculateAccessoryPrice(productType, 'dual', { items });
-        this.uiService.setDualPrice(price);
-        this._updateSummaryAccessoriesTotal();
+        this.quoteService.updateAccessorySummary({ dualCostSum: price });
         return true; // Indicate success
     }
 

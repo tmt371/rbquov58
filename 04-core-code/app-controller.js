@@ -189,12 +189,13 @@ export class AppController {
             removal: 20
         };
         
-        const winderPrice = uiState.summaryWinderPrice || 0;
-        const dualPrice = uiState.dualPrice || 0;
-        const motorPrice = uiState.summaryMotorPrice || 0;
-        const remotePrice = uiState.summaryRemotePrice || 0;
-        const chargerPrice = uiState.summaryChargerPrice || 0;
-        const cordPrice = uiState.summaryCordPrice || 0;
+        const accessories = productSummary.accessories || {};
+        const winderPrice = accessories.winderCostSum || 0;
+        const dualPrice = accessories.dualCostSum || 0;
+        const motorPrice = accessories.motorCostSum || 0;
+        const remotePrice = accessories.remoteCostSum || 0;
+        const chargerPrice = accessories.chargerCostSum || 0;
+        const cordPrice = accessories.cordCostSum || 0;
 
         const wifiQty = f2State.wifiQty || 0;
         const deliveryQty = f2State.deliveryQty || 0;
@@ -225,9 +226,6 @@ export class AppController {
         this.uiService.setF2Value('deliveryFee', deliveryFee);
         this.uiService.setF2Value('installFee', installFee);
         this.uiService.setF2Value('removalFee', removalFee);
-        this.uiService.setF2Value('acceSum', acceSum);
-        this.uiService.setF2Value('eAcceSum', eAcceSum);
-        this.uiService.setF2Value('surchargeFee', surchargeFee);
         this.uiService.setF2Value('firstRbPrice', firstRbPrice);
         this.uiService.setF2Value('disRbPrice', disRbPrice);
         this.uiService.setF2Value('sumPrice', sumPrice);
