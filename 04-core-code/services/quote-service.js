@@ -30,9 +30,9 @@ export class QuoteService {
 
     /**
      * Gets the data object for the currently active product.
-     * @private
+     * @public
      */
-    _getCurrentProductData() {
+    getCurrentProductData() {
         const productKey = this._getCurrentProductKey();
         return this.quoteData.products[productKey];
     }
@@ -42,7 +42,7 @@ export class QuoteService {
      * @private
      */
     _getCurrentProductSummary() {
-        const productData = this._getCurrentProductData();
+        const productData = this.getCurrentProductData();
         return productData ? productData.summary : null;
     }
     
@@ -54,7 +54,7 @@ export class QuoteService {
 
     getItems() {
         // [REFACTORED] Dynamically get items from the current product's data.
-        const productData = this._getCurrentProductData();
+        const productData = this.getCurrentProductData();
         return productData ? productData.items : [];
     }
     
