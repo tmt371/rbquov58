@@ -88,6 +88,7 @@ export class LeftPanelComponent {
             button.disabled = isInEditMode && !isThisButtonActive;
         });
 
+        // [NEW] Disable the panel toggle handle when any edit mode is active.
         if (this.panelToggle) {
             this.panelToggle.style.pointerEvents = isInEditMode ? 'none' : 'auto';
             this.panelToggle.style.opacity = isInEditMode ? '0.5' : '1';
@@ -115,7 +116,8 @@ export class LeftPanelComponent {
             driveAccessoryMode, driveRemoteCount, driveChargerCount, driveCordCount,
             driveWinderTotalPrice, driveMotorTotalPrice, driveRemoteTotalPrice, driveChargerTotalPrice, driveCordTotalPrice,
             driveGrandTotal,
-            summaryAccessoriesTotal // [FIX] Read the centrally calculated total
+            summaryWinderPrice, summaryMotorPrice,
+            summaryRemotePrice, summaryChargerPrice, summaryCordPrice, summaryAccessoriesTotal
         } = uiState;
         
         const currentProductKey = quoteData.currentProduct;
@@ -144,12 +146,12 @@ export class LeftPanelComponent {
         if (this.lfButton) this.lfButton.classList.toggle('active', isLFSelectMode);
         if (this.lfDelButton) this.lfDelButton.classList.toggle('active', isLFDeleteMode);
 
+        const hasB2 = items.some(item => item.fabricType === 'B2');
         const hasLFModified = lfModifiedRowIndexes.size > 0;
 
         if (this.locationButton) this.locationButton.disabled = isAnyK2ModeActive;
         if (this.fabricColorButton) this.fabricColorButton.disabled = activeEditMode !== null && !isFCMode;
-        // [FIX] Removed the `hasB2` check to always enable the button unless another mode is active.
-        if (this.lfButton) this.lfButton.disabled = activeEditMode !== null && !isLFSelectMode;
+        if (this.lfButton) this.lfButton.disabled = (activeEditMode !== null && !isLFSelectMode) || !hasB2;
         if (this.lfDelButton) this.lfDelButton.disabled = (activeEditMode !== null && !isLFDeleteMode) || !hasLFModified;
 
         // --- K3 Button Active/Disabled States ---
@@ -237,23 +239,21 @@ export class LeftPanelComponent {
             }
         }
         
-        // [FIX] Render all summary prices directly from the central quoteData state
         if (this.k5WinderSummaryDisplay) {
-            this.k5WinderSummaryDisplay.value = formatPrice(accessoriesSummary.winderCostSum);
+            this.k5WinderSummaryDisplay.value = formatPrice(summaryWinderPrice);
         }
         if (this.k5MotorSummaryDisplay) {
-            this.k5MotorSummaryDisplay.value = formatPrice(accessoriesSummary.motorCostSum);
+            this.k5MotorSummaryDisplay.value = formatPrice(summaryMotorPrice);
         }
         if (this.k5RemoteSummaryDisplay) {
-            this.k5RemoteSummaryDisplay.value = formatPrice(accessoriesSummary.remoteCostSum);
+            this.k5RemoteSummaryDisplay.value = formatPrice(summaryRemotePrice);
         }
         if (this.k5ChargerSummaryDisplay) {
-            this.k5ChargerSummaryDisplay.value = formatPrice(accessoriesSummary.chargerCostSum);
+            this.k5ChargerSummaryDisplay.value = formatPrice(summaryChargerPrice);
         }
         if (this.k5CordSummaryDisplay) {
-            this.k5CordSummaryDisplay.value = formatPrice(accessoriesSummary.cordCostSum);
+            this.k5CordSummaryDisplay.value = formatPrice(summaryCordPrice);
         }
-        // [FIX] Render the K5 total from the centrally calculated value in uiState
         if (this.k5AccessoriesTotalDisplay) {
             this.k5AccessoriesTotalDisplay.value = formatPrice(summaryAccessoriesTotal);
         }
