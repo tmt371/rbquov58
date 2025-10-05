@@ -59,6 +59,44 @@ export class UIManager {
 
     initialize() {
         this.eventAggregator.subscribe('userToggledNumericKeyboard', () => this._toggleNumericKeyboard());
+        this._initializeResizeObserver();
+    }
+
+    _initializeResizeObserver() {
+        const resizeObserver = new ResizeObserver(() => {
+            // Recalculate position whenever the app's size changes, if the panel is expanded.
+            if (this.leftPanelElement.classList.contains('is-expanded')) {
+                this._updateExpandedPanelPosition();
+            }
+        });
+        // Observe the main app container for size changes.
+        resizeObserver.observe(this.appElement);
+    }
+
+    _updateExpandedPanelPosition() {
+        if (!this.leftPanelElement) return;
+
+        const keyboardToggle = document.getElementById('panel-toggle');
+        const typeKey = document.getElementById('key-type');
+
+        if (!keyboardToggle || !typeKey) {
+            console.error("One or more reference elements for panel positioning are missing.");
+            return;
+        }
+
+        const keyboardToggleRect = keyboardToggle.getBoundingClientRect();
+        const typeKeyRect = typeKey.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+
+        // Calculate new position and size
+        const newTop = keyboardToggleRect.bottom;
+        const newWidth = typeKeyRect.left + (typeKeyRect.width / 2);
+        const newHeight = viewportHeight - newTop;
+
+        // Apply styles
+        this.leftPanelElement.style.top = `${newTop}px`;
+        this.leftPanelElement.style.width = `${newWidth}px`;
+        this.leftPanelElement.style.height = `${newHeight}px`;
     }
 
     render(state) {
@@ -88,54 +126,6 @@ export class UIManager {
         this._scrollToActiveCell(state);
     }
 
-    _adjustLeftPanelLayout() {
-        const leftPanel = this.leftPanelElement;
-        const appContainer = this.appElement;
-        const numericKeyboard = this.numericKeyboardPanel;
-
-        if (!leftPanel || !appContainer || !numericKeyboard) {
-            console.error("Layout adjustment aborted: One or more critical elements not found.");
-            return;
-        }
-
-        const isKeyboardCollapsed = numericKeyboard.classList.contains('is-collapsed');
-
-        // [BUG FIX] The entire layout calculation should ONLY run when the keyboard is visible.
-        if (!isKeyboardCollapsed) {
-            const key7 = document.getElementById('key-7');
-            const key0 = document.getElementById('key-0');
-            const typeKey = document.getElementById('key-type');
-            if (!key7 || !key0 || !typeKey) {
-                console.error("Precision mode aborted: One or more keypad keys not found.");
-                return; 
-            }
-
-            const key7Rect = key7.getBoundingClientRect();
-            const key0Rect = key0.getBoundingClientRect();
-            const typeKeyRect = typeKey.getBoundingClientRect();
-
-            if (key7Rect.width > 0) {
-                const dynamicTop = key7Rect.top;
-                const dynamicHeight = key0Rect.bottom - key7Rect.top;
-                const dynamicWidth = typeKeyRect.left + (typeKeyRect.width / 2);
-                
-                leftPanel.style.top = `${dynamicTop}px`;
-                leftPanel.style.height = `${dynamicHeight}px`;
-                leftPanel.style.width = `${dynamicWidth}px`;
-            } else {
-                console.warn("Keys have no width, precision layout skipped.");
-            }
-        }
-    }
-
-    _initializeLeftPanelLayout() {
-        const resizeObserver = new ResizeObserver(() => {
-            if (this.leftPanelElement.classList.contains('is-expanded')) {
-                this._adjustLeftPanelLayout();
-            }
-        });
-        resizeObserver.observe(this.appElement);
-    }
     
     _updateLeftPanelState(currentView) {
         if (this.leftPanelElement) {

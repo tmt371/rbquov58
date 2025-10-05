@@ -11,12 +11,11 @@
 }
 #left-panel {
     position: fixed;
-    left: 0; 
-    /* [REMOVED] The fixed width is removed to allow dynamic sizing by JavaScript. */
-    /* width: 400px; */
+    top: 0;
+    left: 0;
+    height: 100%; /* Default to full height, will be adjusted by JS */
     background-color: var(--k1-bg-color);
-    border: 1px solid var(--panel-border-color);
-    border-left: none;
+    border-right: 1px solid var(--panel-border-color);
     box-shadow: 2px 0 10px rgba(0,0,0,0.1);
     z-index: 100;
     transition: transform 0.3s ease-in-out, background-color 0.3s ease-in-out;
@@ -30,20 +29,20 @@
     transform: translateX(0);
 }
 #left-panel-toggle {
-    position: absolute;
-    top: 50%;
-    width: 24px;
-    right: -24px; 
-    transform: translateY(-50%);
-    height: 80px;
-    background-color: #e5e7eb;
+    position: fixed; /* Attach to the viewport */
+    top: 10px;       /* Position from the top */
+    left: 10px;      /* Position from the left */
+    width: 32px;
+    height: 32px;
+    background-color: rgba(229, 231, 235, 0.8);
     border: 1px solid var(--panel-border-color);
-    border-left: none;
-    border-radius: 0 8px 8px 0;
+    border-radius: 50%;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
+    z-index: 101; /* Ensure it's above the collapsed panel */
+    backdrop-filter: blur(2px);
 }
 .tab-container { display: flex; flex-shrink: 0; background-color: #d1d5db; }
 .tab-button {
