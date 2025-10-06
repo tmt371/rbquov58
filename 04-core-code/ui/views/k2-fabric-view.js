@@ -34,25 +34,25 @@ export class K2FabricView {
             if (hasConflict) {
                 // [NEW] Show a 3-option dialog: Continue (overwrite), Maintain (skip), or Cancel.
                 this.eventAggregator.publish('showConfirmationDialog', {
-                    message: '部分品項(B2, B3, B4)已存在Light-Filter設定。直接編輯將會覆蓋這些資料，請問要如何處理？',
+                    message: 'Data Conflict: Some items (B2, B3, B4) already have Light-Filter settings. Continuing with a batch edit will overwrite this data. How would you like to proceed?',
                     closeOnOverlayClick: false,
                     layout: [
                         [
                             { 
-                                type: 'button', text: '繼續 (覆蓋LF)', 
+                                type: 'button', text: 'Overwrite (L-Filter)', 
                                 callback: () => {
                                     this.indexesToExcludeFromBatchUpdate.clear();
                                     this._enterFCMode(true); // Enters mode and clears LF pink background
                                 } 
                             },
                             { 
-                                type: 'button', text: '維持 (跳過LF)', 
+                                type: 'button', text: 'Keep Existing (Skip L-Filter)', 
                                 callback: () => {
                                     this.indexesToExcludeFromBatchUpdate = new Set(this.uiService.getState().lfModifiedRowIndexes);
                                     this._enterFCMode(false); // Enters mode but keeps LF pink background
                                 }
                             },
-                            { type: 'button', text: '取消', className: 'secondary', callback: () => {} }
+                            { type: 'button', text: 'Cancel', className: 'secondary', callback: () => {} }
                         ]
                     ]
                 });
@@ -266,7 +266,7 @@ export class K2FabricView {
 
         if (needsAttention) {
             this.eventAggregator.publish('showConfirmationDialog', {
-                message: '系統檢測到部分品項在變更 TYPE 後，其布料名稱 (F-NAME) 或顏色 (F-COLOR) 需要重新設定。請檢查並完成輸入。',
+                message: 'Notice: Because the fabric TYPE was changed, the Fabric Name (F-NAME) and/or Color (F-COLOR) for some items have been cleared. Please review and fill in the missing details.',
                 layout: [
                     [
                         { 
