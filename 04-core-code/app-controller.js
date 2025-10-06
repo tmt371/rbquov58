@@ -167,7 +167,9 @@ export class AppController {
         this.quoteService.quoteData = updatedQuoteData;
         
         this.detailConfigView.driveAccessoriesView.recalculateAllDriveAccessoryPrices();
-        this.detailConfigView.dualChainView.recalculateDualPrice();
+        
+        // [FIX] Updated the function call to the new, refactored method in dual-chain-view.js
+        this.detailConfigView.dualChainView._calculateAndStoreDualPrice();
 
         this._calculateF2Summary();
         
