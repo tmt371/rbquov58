@@ -158,8 +158,9 @@ export class DualChainView {
      */
     _updateSummaryAccessoriesTotal() {
         const state = this.uiService.getState();
+        const currentProductData = this.quoteService.getCurrentProductData();
         
-        const dualPrice = state.dualPrice || 0;
+        const dualPrice = currentProductData.summary.dualCostSum || 0;
         const winderPrice = state.summaryWinderPrice || 0;
         const motorPrice = state.summaryMotorPrice || 0;
         const remotePrice = state.summaryRemotePrice || 0;
