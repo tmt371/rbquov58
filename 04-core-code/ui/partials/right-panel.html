@@ -13,100 +13,78 @@
 <div class="tab-content-container">
     <div id="f1-content" class="tab-content active">
         <div class="f1-grid">
-            <!-- Row 1: Headers -->
             <div class="f1-grid-cell"></div>
             <div class="f1-grid-cell f1-header-label">RB</div>
             <div class="f1-grid-cell f1-header-label">OP</div>
 
-            <!-- Row 2: Insert / Save -->
             <button id="f1-key-insert" class="f1-grid-cell f1-button">Insert</button>
             <div class="f1-grid-cell"></div>
             <button id="f1-key-save" class="f1-grid-cell f1-button">Save</button>
 
-            <!-- Row 3: Delete / Export -->
             <button id="f1-key-delete" class="f1-grid-cell f1-button">Delete</button>
             <div class="f1-grid-cell"></div>
             <button id="f1-key-export" class="f1-grid-cell f1-button">Export</button>
 
-            <!-- Row 4: M-Sel / Load -->
             <button id="f1-key-m-sel" class="f1-grid-cell f1-button">M-Sel</button>
             <div class="f1-grid-cell"></div>
             <button id="f1-key-load" class="f1-grid-cell f1-button">Load</button>
 
-            <!-- Row 5: T-Set / Reset -->
             <button id="f1-key-t-set" class="f1-grid-cell f1-button">T-Set</button>
             <div class="f1-grid-cell"></div>
             <button id="f1-key-reset" class="f1-grid-cell f1-button">Reset</button>
 
-            <!-- Row 6: Spacer -->
             <div class="f1-grid-cell f1-spacer-row" style="grid-column: span 3;"></div>
 
-            <!-- Row 7: Component Header -->
-            <div class="f1-grid-cell f1-component-header" style="grid-column: span 3;">Component Cost</div>
+            <div class="f1-component-header-group" style="grid-column: span 3;">
+                <div class="f1-component-header">Component Cost</div>
+                <div id="f1-price-total" class="f1-price-display"></div>
+            </div>
 
-            <!-- Row 8: Column Titles -->
             <div class="f1-grid-cell f1-col-title">Item</div>
             <div class="f1-grid-cell f1-col-title">Qty</div>
             <div class="f1-grid-cell f1-col-title">$</div>
 
-            <!-- Row 9: Winder -->
             <div class="f1-grid-cell f1-item-label">Winder</div>
             <div id="f1-qty-winder" class="f1-grid-cell f1-qty-display"></div>
             <div id="f1-price-winder" class="f1-grid-cell f1-price-display"></div>
 
-            <!-- Row 10: Motor -->
             <div class="f1-grid-cell f1-item-label">Motor</div>
             <div id="f1-qty-motor" class="f1-grid-cell f1-qty-display"></div>
             <div id="f1-price-motor" class="f1-grid-cell f1-price-display"></div>
 
-            <!-- Row 11: Remote -->
             <div class="f1-grid-cell f1-item-label">Remote</div>
             <div class="f1-grid-cell"></div>
             <div class="f1-grid-cell"></div>
 
-            <!-- Row 12: 1 Ch -->
             <div class="f1-grid-cell f1-item-label f1-sub-item">1 Ch</div>
             <div id="f1-qty-remote-1ch" class="f1-grid-cell f1-input-qty f1-clickable-qty"></div>
             <div id="f1-price-remote-1ch" class="f1-grid-cell f1-price-display"></div>
 
-            <!-- Row 13: 16 Ch -->
             <div class="f1-grid-cell f1-item-label f1-sub-item">16 Ch</div>
             <div id="f1-qty-remote-16ch" class="f1-grid-cell f1-qty-display"></div>
             <div id="f1-price-remote-16ch" class="f1-grid-cell f1-price-display"></div>
 
-            <!-- Row 14: Charger -->
             <div class="f1-grid-cell f1-item-label">Charger</div>
             <div id="f1-qty-charger" class="f1-grid-cell f1-qty-display"></div>
             <div id="f1-price-charger" class="f1-grid-cell f1-price-display"></div>
 
-            <!-- Row 15: 3M cord -->
             <div class="f1-grid-cell f1-item-label">3M cord</div>
             <div id="f1-qty-3m-cord" class="f1-grid-cell f1-qty-display"></div>
             <div id="f1-price-3m-cord" class="f1-grid-cell f1-price-display"></div>
 
-            <!-- Row 16: Dual -->
             <div class="f1-grid-cell f1-item-label">Dual</div>
             <div class="f1-grid-cell"></div>
             <div class="f1-grid-cell"></div>
 
-            <!-- Row 17: Combo -->
             <div class="f1-grid-cell f1-item-label f1-sub-item">Combo</div>
             <input type="number" id="f1-qty-dual-combo" class="f1-grid-cell f1-input-qty" min="0">
             <div id="f1-price-dual-combo" class="f1-grid-cell f1-price-display"></div>
 
-            <!-- Row 18: Slim -->
             <div class="f1-grid-cell f1-item-label f1-sub-item">Slim</div>
             <input type="number" id="f1-qty-slim" class="f1-grid-cell f1-input-qty" min="0">
             <div id="f1-price-slim" class="f1-grid-cell f1-price-display"></div>
 
-            <!-- Row 19: Spacer -->
-            <div class="f1-grid-cell f1-spacer-row" style="grid-column: span 3;"></div>
-
-            <!-- Row 20: Total -->
-            <div class="f1-grid-cell f1-total-label">Total</div>
-            <div class="f1-grid-cell"></div>
-            <div id="f1-price-total" class="f1-grid-cell f1-price-display"></div>
-        </div>
+            </div>
     </div>
     <div id="f2-content" class="tab-content">
         <div class="f2-summary-grid">
