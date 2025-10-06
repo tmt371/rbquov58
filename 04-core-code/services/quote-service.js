@@ -7,24 +7,24 @@
  */
 
 export class QuoteService {
-    constructor({ initialState, productFactory, configManager }) {
-        this.quoteData = JSON.parse(JSON.stringify(initialState.quoteData));
+    constructor({ stateService, productFactory, configManager }) {
+        this.stateService = stateService;
         this.productFactory = productFactory;
         this.configManager = configManager; 
-        this.initialState = initialState;
-
-        console.log("QuoteService Initialized for Generic State Structure.");
+        console.log("QuoteService refactored to be a stateless logic processor.");
     }
 
     // --- Private helper methods for accessing product-specific data ---
 
     _getCurrentProductKey() {
-        return this.quoteData.currentProduct;
+        const { quoteData } = this.stateService.getState();
+        return quoteData.currentProduct;
     }
 
     getCurrentProductData() {
+        const { quoteData } = this.stateService.getState();
         const productKey = this._getCurrentProductKey();
-        return this.quoteData.products[productKey];
+        return quoteData.products[productKey];
     }
 
     _getCurrentProductSummary() {
@@ -35,7 +35,8 @@ export class QuoteService {
     // --- Public API ---
 
     getQuoteData() {
-        return this.quoteData;
+        const { quoteData } = this.stateService.getState();
+        return quoteData;
     }
 
     getItems() {
@@ -44,214 +45,310 @@ export class QuoteService {
     }
     
     getCurrentProductType() {
-        return this.quoteData.currentProduct;
+        const { quoteData } = this.stateService.getState();
+        return quoteData.currentProduct;
     }
 
     insertRow(selectedIndex) {
-        const items = this.getItems();
-        const productStrategy = this.productFactory.getProductStrategy(this._getCurrentProductKey());
+        const currentState = this.stateService.getState();
+        const { quoteData } = currentState;
+        const productKey = this._getCurrentProductKey();
+        const productData = quoteData.products[productKey];
+        const items = [...productData.items];
+
+        const productStrategy = this.productFactory.getProductStrategy(productKey);
         const newItem = productStrategy.getInitialItemData();
         const newRowIndex = selectedIndex + 1;
         items.splice(newRowIndex, 0, newItem);
+
+        const newProductData = { ...productData, items };
+        const newQuoteData = { ...quoteData, products: { ...quoteData.products, [productKey]: newProductData } };
+        this.stateService.updateState({ ...currentState, quoteData: newQuoteData });
+
         return newRowIndex;
     }
 
     deleteRow(selectedIndex) {
-        const items = this.getItems();
+        const currentState = this.stateService.getState();
+        const { quoteData } = currentState;
+        const productKey = this._getCurrentProductKey();
+        const productData = quoteData.products[productKey];
+        let items = [...productData.items];
+
         const isLastRow = selectedIndex === items.length - 1;
         const item = items[selectedIndex];
         const isRowEmpty = !item.width && !item.height && !item.fabricType;
 
-        if (isLastRow && !isRowEmpty) {
-            this.clearRow(selectedIndex);
-            return;
+        if ((isLastRow && !isRowEmpty) || items.length === 1) {
+            const productStrategy = this.productFactory.getProductStrategy(productKey);
+            const newItem = productStrategy.getInitialItemData();
+            newItem.itemId = items[selectedIndex].itemId;
+            items[selectedIndex] = newItem;
+        } else {
+            items.splice(selectedIndex, 1);
         }
 
-        if (items.length === 1) {
-            this.clearRow(selectedIndex);
-            return;
-        }
+        items = this._consolidateEmptyRows(items, productKey);
 
-        items.splice(selectedIndex, 1);
+        const newProductData = { ...productData, items };
+        const newQuoteData = { ...quoteData, products: { ...quoteData.products, [productKey]: newProductData } };
+        this.stateService.updateState({ ...currentState, quoteData: newQuoteData });
     }
 
     clearRow(selectedIndex) {
-        const itemToClear = this.getItems()[selectedIndex];
+        const currentState = this.stateService.getState();
+        const { quoteData } = currentState;
+        const productKey = this._getCurrentProductKey();
+        const productData = quoteData.products[productKey];
+        const items = [...productData.items];
+
+        const itemToClear = items[selectedIndex];
         if (itemToClear) {
-            const productStrategy = this.productFactory.getProductStrategy(this._getCurrentProductKey());
+            const productStrategy = this.productFactory.getProductStrategy(productKey);
             const newItem = productStrategy.getInitialItemData();
             newItem.itemId = itemToClear.itemId;
-            this.getItems()[selectedIndex] = newItem;
+            items[selectedIndex] = newItem;
+
+            const newProductData = { ...productData, items };
+            const newQuoteData = { ...quoteData, products: { ...quoteData.products, [productKey]: newProductData } };
+            this.stateService.updateState({ ...currentState, quoteData: newQuoteData });
         }
     }
 
     updateItemValue(rowIndex, column, value) {
-        const targetItem = this.getItems()[rowIndex];
-        if (!targetItem) return false;
+        const currentState = this.stateService.getState();
+        const { quoteData } = currentState;
+        const productKey = this._getCurrentProductKey();
+        const productData = quoteData.products[productKey];
+        let items = [...productData.items];
 
-        if (targetItem[column] !== value) {
-            targetItem[column] = value;
-            targetItem.linePrice = null;
+        const targetItem = items[rowIndex];
+        if (!targetItem || targetItem[column] === value) return false;
 
-            if ((column === 'width' || column === 'height') && targetItem.width && targetItem.height) {
-                if ((targetItem.width * targetItem.height) > 4000000 && !targetItem.motor) {
-                    targetItem.winder = 'HD';
-                }
+        const newItem = { ...targetItem, [column]: value, linePrice: null };
+
+        if ((column === 'width' || column === 'height') && newItem.width && newItem.height) {
+            if ((newItem.width * newItem.height) > 4000000 && !newItem.motor) {
+                newItem.winder = 'HD';
             }
-            
-            this.consolidateEmptyRows();
-            return true;
         }
-        return false;
+
+        items[rowIndex] = newItem;
+
+        items = this._consolidateEmptyRows(items, productKey);
+
+        const newProductData = { ...productData, items };
+        const newQuoteData = { ...quoteData, products: { ...quoteData.products, [productKey]: newProductData } };
+        this.stateService.updateState({ ...currentState, quoteData: newQuoteData });
+
+        return true;
     }
     
     updateItemProperty(rowIndex, property, value) {
-        const item = this.getItems()[rowIndex];
-        if (item && item[property] !== value) {
-            item[property] = value;
-            return true;
-        }
-        return false;
+        const currentState = this.stateService.getState();
+        const { quoteData } = currentState;
+        const productKey = this._getCurrentProductKey();
+        const productData = quoteData.products[productKey];
+        const items = [...productData.items];
+        const item = items[rowIndex];
+
+        if (!item || item[property] === value) return false;
+
+        items[rowIndex] = { ...item, [property]: value };
+
+        const newProductData = { ...productData, items };
+        const newQuoteData = { ...quoteData, products: { ...quoteData.products, [productKey]: newProductData } };
+        this.stateService.updateState({ ...currentState, quoteData: newQuoteData });
+
+        return true;
     }
 
     updateWinderMotorProperty(rowIndex, property, value) {
-        const item = this.getItems()[rowIndex];
-        if (!item) return false;
+        const currentState = this.stateService.getState();
+        const { quoteData } = currentState;
+        const productKey = this._getCurrentProductKey();
+        const productData = quoteData.products[productKey];
+        const items = [...productData.items];
+        const item = items[rowIndex];
 
-        if (item[property] !== value) {
-            item[property] = value;
-            if (value) {
-                if (property === 'winder') item.motor = '';
-                if (property === 'motor') item.winder = '';
-            }
-            return true;
+        if (!item || item[property] === value) return false;
+
+        const newItem = { ...item, [property]: value };
+        if (value) {
+            if (property === 'winder') newItem.motor = '';
+            if (property === 'motor') newItem.winder = '';
         }
-        return false;
+        items[rowIndex] = newItem;
+
+        const newProductData = { ...productData, items };
+        const newQuoteData = { ...quoteData, products: { ...quoteData.products, [productKey]: newProductData } };
+        this.stateService.updateState({ ...currentState, quoteData: newQuoteData });
+
+        return true;
     }
     
     updateAccessorySummary(data) {
-        const summary = this._getCurrentProductSummary();
-        if (data && summary && summary.accessories) {
-            Object.assign(summary.accessories, data);
-        }
+        const currentState = this.stateService.getState();
+        const { quoteData } = currentState;
+        const productKey = this._getCurrentProductKey();
+        const productData = quoteData.products[productKey];
+        const summary = productData.summary;
+
+        if (!data || !summary || !summary.accessories) return;
+
+        const newAccessories = { ...summary.accessories, ...data };
+        const newSummary = { ...summary, accessories: newAccessories };
+        const newProductData = { ...productData, summary: newSummary };
+        const newQuoteData = { ...quoteData, products: { ...quoteData.products, [productKey]: newProductData } };
+        this.stateService.updateState({ ...currentState, quoteData: newQuoteData });
     }
 
     setCostDiscount(percentage) {
-        this.quoteData.costDiscountPercentage = percentage;
+        const currentState = this.stateService.getState();
+        const { quoteData } = currentState;
+        const newQuoteData = { ...quoteData, costDiscountPercentage: percentage };
+        this.stateService.updateState({ ...currentState, quoteData: newQuoteData });
     }
 
     cycleK3Property(rowIndex, column) {
-        const item = this.getItems()[rowIndex];
+        const currentState = this.stateService.getState();
+        const { quoteData } = currentState;
+        const productKey = this._getCurrentProductKey();
+        const productData = quoteData.products[productKey];
+        const items = [...productData.items];
+        const item = items[rowIndex];
+
         if (!item) return false;
 
         const currentValue = item[column] || '';
         let nextValue = currentValue;
 
         switch (column) {
-            case 'over':
-                nextValue = (currentValue === '') ? 'O' : '';
-                break;
-            case 'oi':
-                if (currentValue === '') nextValue = 'IN';
-                else if (currentValue === 'IN') nextValue = 'OUT';
-                else if (currentValue === 'OUT') nextValue = 'IN';
-                break;
-            case 'lr':
-                if (currentValue === '') nextValue = 'L';
-                else if (currentValue === 'L') nextValue = 'R';
-                else if (currentValue === 'R') nextValue = 'L';
-                break;
+            case 'over': nextValue = (currentValue === '') ? 'O' : ''; break;
+            case 'oi': nextValue = (currentValue === '') ? 'IN' : (currentValue === 'IN' ? 'OUT' : 'IN'); break;
+            case 'lr': nextValue = (currentValue === '') ? 'L' : (currentValue === 'L' ? 'R' : 'L'); break;
         }
 
-        if (item[column] !== nextValue) {
-            item[column] = nextValue;
-            return true;
+        if (item[column] === nextValue) return false;
+
+        items[rowIndex] = { ...item, [column]: nextValue };
+        const newProductData = { ...productData, items };
+        const newQuoteData = { ...quoteData, products: { ...quoteData.products, [productKey]: newProductData } };
+        this.stateService.updateState({ ...currentState, quoteData: newQuoteData });
+        return true;
+    }
+
+    _updateItems(updateLogic) {
+        const currentState = this.stateService.getState();
+        const { quoteData } = currentState;
+        const productKey = this._getCurrentProductKey();
+        const productData = quoteData.products[productKey];
+
+        const { newItems, changed } = updateLogic([...productData.items]);
+
+        if (changed) {
+            const newProductData = { ...productData, items: newItems };
+            const newQuoteData = { ...quoteData, products: { ...quoteData.products, [productKey]: newProductData } };
+            this.stateService.updateState({ ...currentState, quoteData: newQuoteData });
         }
-        return false;
+        return changed;
     }
 
     batchUpdateProperty(property, value) {
-        const items = this.getItems();
-        let changed = false;
-        items.forEach(item => {
-            if (item.width || item.height) {
-                if (item[property] !== value) {
-                    item[property] = value;
+        return this._updateItems(items => {
+            let changed = false;
+            const newItems = items.map(item => {
+                if ((item.width || item.height) && item[property] !== value) {
                     changed = true;
+                    return { ...item, [property]: value };
                 }
-            }
+                return item;
+            });
+            return { newItems, changed };
         });
-        return changed;
     }
     
-    /**
-     * [REVISED] Now accepts an optional set of indexes to exclude from the update.
-     */
     batchUpdatePropertyByType(type, property, value, indexesToExclude = new Set()) {
-        const items = this.getItems();
-        let changed = false;
-        items.forEach((item, index) => {
-            // [NEW] Skip this item if its index is in the exclusion set.
-            if (indexesToExclude.has(index)) {
-                return;
-            }
-
-            if (item.fabricType === type) {
-                if (item[property] !== value) {
-                    item[property] = value;
+        return this._updateItems(items => {
+            let changed = false;
+            const newItems = items.map((item, index) => {
+                if (!indexesToExclude.has(index) && item.fabricType === type && item[property] !== value) {
                     changed = true;
+                    return { ...item, [property]: value };
                 }
-            }
+                return item;
+            });
+            return { newItems, changed };
         });
-        return changed;
     }
 
     batchUpdateLFProperties(rowIndexes, fabricName, fabricColor) {
-        const items = this.getItems();
         const newFabricName = `L-Filter ${fabricName}`;
-        let changed = false;
-
-        for (const index of rowIndexes) {
-            const item = items[index];
-            if (item) {
-                if (item.fabric !== newFabricName) {
-                    item.fabric = newFabricName;
-                    changed = true;
+        return this._updateItems(items => {
+            let changed = false;
+            const newItems = items.map((item, index) => {
+                if (rowIndexes.includes(index)) {
+                    const newItem = { ...item };
+                    if (newItem.fabric !== newFabricName) {
+                        newItem.fabric = newFabricName;
+                        changed = true;
+                    }
+                    if (newItem.color !== fabricColor) {
+                        newItem.color = fabricColor;
+                        changed = true;
+                    }
+                    return newItem;
                 }
-                if (item.color !== fabricColor) {
-                    item.color = fabricColor;
-                    changed = true;
-                }
-            }
-        }
-        return changed;
+                return item;
+            });
+            return { newItems, changed };
+        });
     }
     
     removeLFProperties(rowIndexes) {
-        const items = this.getItems();
-        let changed = false;
-        for (const index of rowIndexes) {
-            const item = items[index];
-            if (item) {
-                if (item.fabric !== '') {
-                    item.fabric = '';
-                    changed = true;
+        return this._updateItems(items => {
+            let changed = false;
+            const newItems = items.map((item, index) => {
+                if (rowIndexes.includes(index)) {
+                    const newItem = { ...item };
+                    if (newItem.fabric !== '') {
+                        newItem.fabric = '';
+                        changed = true;
+                    }
+                    if (newItem.color !== '') {
+                        newItem.color = '';
+                        changed = true;
+                    }
+                    return newItem;
                 }
-                if (item.color !== '') {
-                    item.color = '';
-                    changed = true;
-                }
-            }
+                return item;
+            });
+            return { newItems, changed };
+        });
+    }
+
+    _updateAndGetChangedIndexes(updateLogic) {
+        const currentState = this.stateService.getState();
+        const { quoteData } = currentState;
+        const productKey = this._getCurrentProductKey();
+        const productData = quoteData.products[productKey];
+
+        const { newItems, changedIndexes } = updateLogic([...productData.items]);
+
+        if (changedIndexes.length > 0) {
+            const newProductData = { ...productData, items: newItems };
+            const newQuoteData = { ...quoteData, products: { ...quoteData.products, [productKey]: newProductData } };
+            this.stateService.updateState({ ...currentState, quoteData: newQuoteData });
         }
-        return changed;
+        return changedIndexes;
     }
 
     cycleItemType(rowIndex) {
         const item = this.getItems()[rowIndex];
-        if (!item || (!item.width && !item.height)) return []; // [REVISED] Return empty array
+        if (!item || (!item.width && !item.height)) return [];
 
         const TYPE_SEQUENCE = this.configManager.getFabricTypeSequence();
-        if (TYPE_SEQUENCE.length === 0) return []; // [REVISED] Return empty array
+        if (TYPE_SEQUENCE.length === 0) return [];
 
         const currentType = item.fabricType || TYPE_SEQUENCE[TYPE_SEQUENCE.length - 1];
         const currentIndex = TYPE_SEQUENCE.indexOf(currentType);
@@ -260,64 +357,52 @@ export class QuoteService {
         return this.setItemType(rowIndex, nextType);
     }
 
-    /**
-     * [REVISED] Now returns an array with the changed row index, or an empty array.
-     */
     setItemType(rowIndex, newType) {
-        const item = this.getItems()[rowIndex];
-        if (item && item.fabricType !== newType) {
-            item.fabricType = newType;
-            item.linePrice = null;
-            item.fabric = '';
-            item.color = '';
-            return [rowIndex]; // [REVISED] Return index of changed row
-        }
-        return []; // [REVISED] Return empty array
-    }
-
-    /**
-     * [REVISED] Now returns an array of all changed row indexes.
-     */
-    batchUpdateFabricType(newType) {
-        const items = this.getItems();
-        const changedIndexes = [];
-        items.forEach((item, index) => {
-            if (item.width && item.height) {
-                if (item.fabricType !== newType) {
-                    item.fabricType = newType;
-                    item.linePrice = null;
-                    item.fabric = '';
-                    item.color = '';
-                    changedIndexes.push(index); // [REVISED] Add index to the list
-                }
+        return this._updateAndGetChangedIndexes(items => {
+            const changedIndexes = [];
+            const item = items[rowIndex];
+            if (item && item.fabricType !== newType) {
+                items[rowIndex] = { ...item, fabricType: newType, linePrice: null, fabric: '', color: '' };
+                changedIndexes.push(rowIndex);
             }
+            return { newItems: items, changedIndexes };
         });
-        return changedIndexes; // [REVISED] Return the list of indexes
     }
 
-    /**
-     * [REVISED] Now returns an array of the changed row indexes from the selection.
-     */
-    batchUpdateFabricTypeForSelection(selectedIndexes, newType) {
-        const items = this.getItems();
-        const changedIndexes = [];
-        for (const index of selectedIndexes) {
-            const item = items[index];
-            if (item && item.width && item.height) {
-                if (item.fabricType !== newType) {
-                    item.fabricType = newType;
-                    item.linePrice = null;
-                    item.fabric = '';
-                    item.color = '';
-                    changedIndexes.push(index); // [REVISED] Add index to the list
+    batchUpdateFabricType(newType) {
+        return this._updateAndGetChangedIndexes(items => {
+            const changedIndexes = [];
+            const newItems = items.map((item, index) => {
+                if (item.width && item.height && item.fabricType !== newType) {
+                    changedIndexes.push(index);
+                    return { ...item, fabricType: newType, linePrice: null, fabric: '', color: '' };
                 }
-            }
-        }
-        return changedIndexes; // [REVISED] Return the list of indexes
+                return item;
+            });
+            return { newItems, changedIndexes };
+        });
+    }
+
+    batchUpdateFabricTypeForSelection(selectedIndexes, newType) {
+        return this._updateAndGetChangedIndexes(items => {
+            const changedIndexes = [];
+            const newItems = items.map((item, index) => {
+                if (selectedIndexes.includes(index) && item.width && item.height && item.fabricType !== newType) {
+                    changedIndexes.push(index);
+                    return { ...item, fabricType: newType, linePrice: null, fabric: '', color: '' };
+                }
+                return item;
+            });
+            return { newItems, changedIndexes };
+        });
     }
 
     reset() {
-        this.quoteData = JSON.parse(JSON.stringify(this.initialState.quoteData));
+        // This needs access to the absolute initial state, which StateService should provide.
+        // For now, this is a simplified implementation. Awaiting StateService enhancement.
+        console.warn("QuoteService.reset() is not fully implemented pending StateService enhancements.");
+        // const initialState = this.stateService.getInitialState();
+        // this.stateService.updateState(initialState);
     }
 
     hasData() {
@@ -327,39 +412,56 @@ export class QuoteService {
     }
 
     deleteMultipleRows(indexesToDelete) {
+        const currentState = this.stateService.getState();
+        const { quoteData } = currentState;
+        const productKey = this._getCurrentProductKey();
+        const productData = quoteData.products[productKey];
+
         const sortedIndexes = [...indexesToDelete].sort((a, b) => b - a);
+        let items = [...productData.items];
 
         sortedIndexes.forEach(index => {
-            this.deleteRow(index);
+            items.splice(index, 1);
         });
 
-        this.consolidateEmptyRows();
+        if (items.length === 0) {
+            const productStrategy = this.productFactory.getProductStrategy(productKey);
+            items.push(productStrategy.getInitialItemData());
+        }
+
+        items = this._consolidateEmptyRows(items, productKey);
+
+        const newProductData = { ...productData, items };
+        const newQuoteData = { ...quoteData, products: { ...quoteData.products, [productKey]: newProductData } };
+        this.stateService.updateState({ ...currentState, quoteData: newQuoteData });
     }
 
-    consolidateEmptyRows() {
-        const items = this.getItems();
-        if (!items) return;
+    _consolidateEmptyRows(items, productKey) {
+        let newItems = [...items];
+        if (!newItems) return [];
         
-        while (items.length > 1) {
-            const lastItem = items[items.length - 1];
-            const secondLastItem = items[items.length - 2];
+        while (newItems.length > 1) {
+            const lastItem = newItems[newItems.length - 1];
+            const secondLastItem = newItems[newItems.length - 2];
             const isLastItemEmpty = !lastItem.width && !lastItem.height && !lastItem.fabricType;
             const isSecondLastItemEmpty = !secondLastItem.width && !secondLastItem.height && !secondLastItem.fabricType;
 
             if (isLastItemEmpty && isSecondLastItemEmpty) {
-                items.pop();
+                newItems.pop();
             } else {
                 break;
             }
         }
 
-        const lastItem = items[items.length - 1];
-        if (!lastItem) return;
+        const lastItem = newItems[newItems.length - 1];
+        if (!lastItem) return newItems;
+
         const isLastItemEmpty = !lastItem.width && !lastItem.height && !lastItem.fabricType;
         if (!isLastItemEmpty) {
-            const productStrategy = this.productFactory.getProductStrategy(this._getCurrentProductKey());
+            const productStrategy = this.productFactory.getProductStrategy(productKey);
             const newItem = productStrategy.getInitialItemData();
-            items.push(newItem);
+            newItems.push(newItem);
         }
+        return newItems;
     }
 }

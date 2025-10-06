@@ -1,13 +1,13 @@
-// File: 04-core-code/services/quote-service.spec.js
-
 import { QuoteService } from './quote-service.js';
+import { StateService } from './state-service.js';
+import { EventAggregator } from '../event-aggregator.js';
 
 // --- Mock Dependencies ---
 const getMockInitialItem = () => ({
     itemId: 'item-1',
     width: null, height: null, fabricType: null, linePrice: null,
     location: '', fabric: '', color: '', over: '',
-    oi: '', lr: '', sd: '', chain: null, winder: '', motor: ''
+    oi: '', lr: '', dual: '', chain: null, winder: '', motor: ''
 });
 
 const mockProductStrategy = {
@@ -22,115 +22,125 @@ const mockConfigManager = {
     getFabricTypeSequence: () => ['B1', 'B2', 'B3', 'B4', 'B5', 'SN']
 };
 
-// [REFACTORED] Updated the mock initial state to match the new generic structure.
 const getMockInitialState = () => ({
     quoteData: {
         currentProduct: 'rollerBlind',
         products: {
             rollerBlind: {
                 items: [{ ...getMockInitialItem() }],
-                summary: { totalSum: 0 }
+                summary: { totalSum: 0, accessories: {} }
             }
         },
-        // Global properties
         costDiscountPercentage: 0,
         customer: {}
-    }
+    },
+    ui: {} // Add a mock ui state object
 });
 
-
 // --- Test Suite ---
-describe('QuoteService', () => {
+describe('QuoteService (Refactored)', () => {
     let quoteService;
+    let stateService;
+    let eventAggregator;
 
     beforeEach(() => {
-        // The service will now be initialized with the new, correctly structured mock state.
-        quoteService = new QuoteService({
+        eventAggregator = new EventAggregator();
+        stateService = new StateService({
             initialState: getMockInitialState(),
+            eventAggregator
+        });
+        quoteService = new QuoteService({
+            stateService,
             productFactory: mockProductFactory,
             configManager: mockConfigManager
         });
     });
 
-    it('should initialize with a single empty row', () => {
-        const items = quoteService.getItems();
+    const getItemsFromState = () => {
+        return stateService.getState().quoteData.products.rollerBlind.items;
+    };
+
+    it('should initialize with a single empty row in the state', () => {
+        const items = getItemsFromState();
         expect(items).toHaveLength(1);
         expect(items[0]).toEqual(expect.objectContaining({
             width: null, height: null, fabricType: null, location: ''
         }));
     });
 
-    it('should insert a new row at the correct position', () => {
-        quoteService.insertRow(0); 
-        const items = quoteService.getItems();
+    it('should insert a new row and update the state', () => {
+        quoteService.insertRow(0);
+        const items = getItemsFromState();
         expect(items).toHaveLength(2);
-        expect(items[1].itemId).not.toBe(items[0].itemId); 
+        expect(items[1].itemId).not.toBe(items[0].itemId);
     });
 
-    it('should delete a row and maintain a single empty row at the end', () => {
-        quoteService.updateItemValue(0, 'width', 1000); 
+    it('should delete a row and update the state', () => {
+        quoteService.updateItemValue(0, 'width', 1000);
         quoteService.insertRow(0);
-        quoteService.updateItemValue(1, 'width', 2000); 
+        quoteService.updateItemValue(1, 'width', 2000);
 
-        let items = quoteService.getItems();
-        expect(items).toHaveLength(3); 
+        let items = getItemsFromState();
+        expect(items).toHaveLength(3);
 
-        quoteService.deleteRow(0); 
-        items = quoteService.getItems();
-        expect(items).toHaveLength(2); 
+        quoteService.deleteRow(0);
+        items = getItemsFromState();
+        expect(items).toHaveLength(2);
         expect(items[0].width).toBe(2000);
     });
 
-    it('should clear the last row with data instead of deleting it', () => {
+    it('should clear the last data row instead of deleting it', () => {
         quoteService.updateItemValue(0, 'width', 1000);
-        let items = quoteService.getItems();
-        expect(items).toHaveLength(2); 
+        let items = getItemsFromState();
+        expect(items.length).toBe(2); // Item with data + one empty row
         
         quoteService.deleteRow(0);
-        items = quoteService.getItems();
-        expect(items).toHaveLength(1); 
+        items = getItemsFromState();
+        expect(items.length).toBe(1); // Should be left with one empty row
         expect(items[0].width).toBeNull();
     });
-    
-    it('should ensure only one empty row exists at the end after updates', () => {
+
+    it('should ensure only one empty row exists at the end of the list after updates', () => {
         quoteService.updateItemValue(0, 'width', 1000);
-        const items = quoteService.getItems();
-        expect(items).toHaveLength(2); 
+        let items = getItemsFromState();
+        expect(items.length).toBe(2);
 
         quoteService.updateItemValue(1, 'width', 2000);
-        expect(items).toHaveLength(3); 
+        items = getItemsFromState();
+        expect(items.length).toBe(3);
 
-        quoteService.deleteRow(1); 
-        expect(items).toHaveLength(2);
+        quoteService.deleteRow(1);
+        items = getItemsFromState();
+        expect(items.length).toBe(2);
+        expect(items[items.length - 1].width).toBeNull();
     });
 
-    it('should cycle through all fabric types based on the sequence from configManager', () => {
+    it('should cycle through all fabric types and update the state', () => {
         quoteService.updateItemValue(0, 'width', 1000);
         quoteService.updateItemValue(0, 'height', 1000);
-        const item = quoteService.getItems()[0];
         
-        expect(item.fabricType).toBeNull();
+        expect(getItemsFromState()[0].fabricType).toBeNull();
 
         quoteService.cycleItemType(0);
-        expect(item.fabricType).toBe('B1');
+        expect(getItemsFromState()[0].fabricType).toBe('B1');
 
         quoteService.cycleItemType(0);
-        expect(item.fabricType).toBe('B2');
+        expect(getItemsFromState()[0].fabricType).toBe('B2');
 
         quoteService.cycleItemType(0);
-        expect(item.fabricType).toBe('B3');
+        expect(getItemsFromState()[0].fabricType).toBe('B3');
 
         quoteService.cycleItemType(0);
-        expect(item.fabricType).toBe('B4');
+        expect(getItemsFromState()[0].fabricType).toBe('B4');
 
         quoteService.cycleItemType(0);
-        expect(item.fabricType).toBe('B5');
+        expect(getItemsFromState()[0].fabricType).toBe('B5');
 
         quoteService.cycleItemType(0);
-        expect(item.fabricType).toBe('SN');
+        expect(getItemsFromState()[0].fabricType).toBe('SN');
 
         // Seventh cycle should loop back to B1
         quoteService.cycleItemType(0);
-        expect(item.fabricType).toBe('B1');
+        expect(getItemsFromState()[0].fabricType).toBe('B1');
     });
 });
