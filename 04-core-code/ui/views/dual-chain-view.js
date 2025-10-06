@@ -119,6 +119,11 @@ export class DualChainView {
         if (dualChainMode === 'dual' && column === 'dual') {
             const newValue = item.dual === 'D' ? '' : 'D';
             this.quoteService.updateItemProperty(rowIndex, 'dual', newValue);
+
+            // [FIX] Immediately recalculate the dual price and the total sum
+            // after every single change, instead of waiting to exit the mode.
+            this.recalculateDualPrice();
+
             this.publish();
         }
 
