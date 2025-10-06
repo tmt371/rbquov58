@@ -9,11 +9,15 @@ export class K2FabricView {
         this.uiService = uiService;
         this.eventAggregator = eventAggregator;
         this.publish = publishStateChangeCallback;
+        
+        // [NEW] A temporary set to hold row indexes that should be skipped during batch updates.
+        this.indexesToExcludeFromBatchUpdate = new Set();
+
         console.log("K2FabricView Initialized.");
     }
 
     /**
-     * Handles the request to enter or exit the Fabric & Color editing mode.
+     * [REVISED] Handles the request to enter Fabric & Color mode, now with a 3-option dialog for conflicts.
      */
     handleFocusModeRequest() {
         const currentMode = this.uiService.getState().activeEditMode;
@@ -28,13 +32,27 @@ export class K2FabricView {
             );
 
             if (hasConflict) {
+                // [NEW] Show a 3-option dialog: Continue (overwrite), Maintain (skip), or Cancel.
                 this.eventAggregator.publish('showConfirmationDialog', {
-                    message: 'Some eligible items (B2, B3, B4) have Light-Filter settings. Continuing will overwrite this data. Proceed?',
+                    message: '部分品項(B2, B3, B4)已存在Light-Filter設定。直接編輯將會覆蓋這些資料，請問要如何處理？',
                     closeOnOverlayClick: false,
                     layout: [
                         [
-                            { type: 'button', text: 'Continue', callback: () => this._enterFCMode(true) },
-                            { type: 'button', text: 'Cancel', className: 'secondary', callback: () => {} }
+                            { 
+                                type: 'button', text: '繼續 (覆蓋LF)', 
+                                callback: () => {
+                                    this.indexesToExcludeFromBatchUpdate.clear();
+                                    this._enterFCMode(true); // Enters mode and clears LF pink background
+                                } 
+                            },
+                            { 
+                                type: 'button', text: '維持 (跳過LF)', 
+                                callback: () => {
+                                    this.indexesToExcludeFromBatchUpdate = new Set(this.uiService.getState().lfModifiedRowIndexes);
+                                    this._enterFCMode(false); // Enters mode but keeps LF pink background
+                                }
+                            },
+                            { type: 'button', text: '取消', className: 'secondary', callback: () => {} }
                         ]
                     ]
                 });
@@ -67,6 +85,9 @@ export class K2FabricView {
         this.publish();
     }
 
+    /**
+     * [REVISED] Now passes the exclusion set to the quote service during batch updates.
+     */
     handlePanelInputBlur({ type, field, value }) {
         const { lfSelectedRowIndexes } = this.uiService.getState();
         
@@ -79,7 +100,8 @@ export class K2FabricView {
                 this.uiService.addLFModifiedRows(lfSelectedRowIndexes);
             }
         } else {
-            this.quoteService.batchUpdatePropertyByType(type, field, value);
+            // [NEW] Pass the set of indexes to exclude from this update.
+            this.quoteService.batchUpdatePropertyByType(type, field, value, this.indexesToExcludeFromBatchUpdate);
         }
         
         this.publish();
@@ -168,10 +190,17 @@ export class K2FabricView {
         }
     }
 
+    /**
+     * [REVISED] Now clears the temporary exclusion set when exiting any K2 mode.
+     */
     _exitAllK2Modes() {
         this.uiService.setActiveEditMode(null);
         this.uiService.clearRowSelection();
         this.uiService.clearLFSelection();
+        
+        // [NEW] Clear the exclusion set to ensure it's fresh for the next operation.
+        this.indexesToExcludeFromBatchUpdate.clear();
+
         this._updatePanelInputsState();
         this.publish();
     }
@@ -228,10 +257,10 @@ export class K2FabricView {
     }
     
     /**
-     * This method is called by the main DetailConfigView when the K2 tab becomes active.
+     * [REVISED] This method now includes a check for incomplete fabric details.
      */
     activate() {
-        // [NEW] Check for items that have a type but are missing fabric details.
+        // Check for items that have a type but are missing fabric details.
         const items = this.quoteService.getItems();
         const needsAttention = items.some(item => item.fabricType && (!item.fabric || !item.color));
 

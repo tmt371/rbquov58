@@ -161,6 +161,9 @@ export class QuickQuoteView {
         this.publish();
     }
     
+    /**
+     * [REVISED] Now handles the returned array of changed indexes to clear LF status.
+     */
     handleTableCellClick({ rowIndex, column }) {
         const item = this.quoteService.getItems()[rowIndex];
         if (!item) return;
@@ -170,15 +173,18 @@ export class QuickQuoteView {
             this.uiService.setInputValue(item[column]);
         } else if (column === 'TYPE') {
             this.uiService.setActiveCell(rowIndex, column);
-            const changed = this.quoteService.cycleItemType(rowIndex);
-            if(changed) {
+            const changedIndexes = this.quoteService.cycleItemType(rowIndex);
+            if (changedIndexes.length > 0) {
+                this.uiService.removeLFModifiedRows(changedIndexes);
                 this.uiService.setSumOutdated(true);
             }
         }
         this.publish();
     }
     
-    // [BUG FIX] Restored the correct batch cycle logic.
+    /**
+     * [REVISED] Now handles the returned array of changed indexes to clear LF status.
+     */
     handleCycleType() {
         const items = this.quoteService.getItems();
         const eligibleItems = items.filter(item => item.width && item.height);
@@ -191,8 +197,9 @@ export class QuickQuoteView {
         const currentIndex = TYPE_SEQUENCE.indexOf(firstType);
         const nextType = TYPE_SEQUENCE[(currentIndex + 1) % TYPE_SEQUENCE.length];
         
-        const changed = this.quoteService.batchUpdateFabricType(nextType);
-        if (changed) {
+        const changedIndexes = this.quoteService.batchUpdateFabricType(nextType);
+        if (changedIndexes.length > 0) {
+            this.uiService.removeLFModifiedRows(changedIndexes);
             this.uiService.setSumOutdated(true);
             this.publish();
         }
@@ -224,6 +231,9 @@ export class QuickQuoteView {
         });
     }
 
+    /**
+     * [REVISED] Now handles the returned array of changed indexes to clear LF status.
+     */
     handleTypeCellLongPress({ rowIndex }) {
         const item = this.quoteService.getItems()[rowIndex];
         if (!item || (!item.width && !item.height)) {
@@ -231,26 +241,34 @@ export class QuickQuoteView {
             return;
         }
         this._showFabricTypeDialog((newType) => {
-            const changed = this.quoteService.setItemType(rowIndex, newType);
-            if (changed) {
+            const changedIndexes = this.quoteService.setItemType(rowIndex, newType);
+            if (changedIndexes.length > 0) {
+                this.uiService.removeLFModifiedRows(changedIndexes);
                 this.uiService.setSumOutdated(true);
                 this.publish();
             }
-            return changed;
+            return changedIndexes.length > 0;
         }, `Set fabric type for Row #${rowIndex + 1}:`);
     }
 
+    /**
+     * [REVISED] Now handles the returned array of changed indexes to clear LF status.
+     */
     handleTypeButtonLongPress() {
         this._showFabricTypeDialog((newType) => {
-            const changed = this.quoteService.batchUpdateFabricType(newType);
-            if (changed) {
+            const changedIndexes = this.quoteService.batchUpdateFabricType(newType);
+            if (changedIndexes.length > 0) {
+                this.uiService.removeLFModifiedRows(changedIndexes);
                 this.uiService.setSumOutdated(true);
                 this.publish();
             }
-            return changed;
+            return changedIndexes.length > 0;
         }, 'Set fabric type for ALL rows:');
     }
 
+    /**
+     * [REVISED] Now handles the returned array of changed indexes to clear LF status.
+     */
     handleMultiTypeSet() {
         const { isMultiSelectMode, multiSelectSelectedIndexes } = this.uiService.getState();
 
@@ -266,13 +284,14 @@ export class QuickQuoteView {
 
         const title = `Set fabric type for ${multiSelectSelectedIndexes.size} selected rows:`;
         this._showFabricTypeDialog((newType) => {
-            const changed = this.quoteService.batchUpdateFabricTypeForSelection(multiSelectSelectedIndexes, newType);
-            if (changed) {
+            const changedIndexes = this.quoteService.batchUpdateFabricTypeForSelection(multiSelectSelectedIndexes, newType);
+            if (changedIndexes.length > 0) {
+                this.uiService.removeLFModifiedRows(changedIndexes);
                 this.uiService.toggleMultiSelectMode();
                 this.uiService.setSumOutdated(true);
                 this.publish();
             }
-            return changed;
+            return changedIndexes.length > 0;
         }, title);
     }
 

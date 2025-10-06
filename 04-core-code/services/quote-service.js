@@ -11,36 +11,22 @@ export class QuoteService {
         this.quoteData = JSON.parse(JSON.stringify(initialState.quoteData));
         this.productFactory = productFactory;
         this.configManager = configManager; 
-        this.initialState = initialState; // [NEW] Store initial state for resetting purposes.
+        this.initialState = initialState;
 
-        // [REFACTORED] The service no longer holds a static itemListName.
-        // It will dynamically determine the correct data to use based on quoteData.currentProduct.
         console.log("QuoteService Initialized for Generic State Structure.");
     }
 
-    // --- [NEW] Private helper methods for accessing product-specific data ---
+    // --- Private helper methods for accessing product-specific data ---
 
-    /**
-     * Gets the key for the currently active product (e.g., 'rollerBlind').
-     * @private
-     */
     _getCurrentProductKey() {
         return this.quoteData.currentProduct;
     }
 
-    /**
-     * Gets the data object for the currently active product.
-     * @public
-     */
     getCurrentProductData() {
         const productKey = this._getCurrentProductKey();
         return this.quoteData.products[productKey];
     }
 
-    /**
-     * Gets the summary object for the currently active product.
-     * @private
-     */
     _getCurrentProductSummary() {
         const productData = this.getCurrentProductData();
         return productData ? productData.summary : null;
@@ -53,7 +39,6 @@ export class QuoteService {
     }
 
     getItems() {
-        // [REFACTORED] Dynamically get items from the current product's data.
         const productData = this.getCurrentProductData();
         return productData ? productData.items : [];
     }
@@ -199,10 +184,18 @@ export class QuoteService {
         return changed;
     }
     
-    batchUpdatePropertyByType(type, property, value) {
+    /**
+     * [REVISED] Now accepts an optional set of indexes to exclude from the update.
+     */
+    batchUpdatePropertyByType(type, property, value, indexesToExclude = new Set()) {
         const items = this.getItems();
         let changed = false;
         items.forEach((item, index) => {
+            // [NEW] Skip this item if its index is in the exclusion set.
+            if (indexesToExclude.has(index)) {
+                return;
+            }
+
             if (item.fabricType === type) {
                 if (item[property] !== value) {
                     item[property] = value;
@@ -255,10 +248,10 @@ export class QuoteService {
 
     cycleItemType(rowIndex) {
         const item = this.getItems()[rowIndex];
-        if (!item || (!item.width && !item.height)) return false;
+        if (!item || (!item.width && !item.height)) return []; // [REVISED] Return empty array
 
         const TYPE_SEQUENCE = this.configManager.getFabricTypeSequence();
-        if (TYPE_SEQUENCE.length === 0) return false; 
+        if (TYPE_SEQUENCE.length === 0) return []; // [REVISED] Return empty array
 
         const currentType = item.fabricType || TYPE_SEQUENCE[TYPE_SEQUENCE.length - 1];
         const currentIndex = TYPE_SEQUENCE.indexOf(currentType);
@@ -267,64 +260,63 @@ export class QuoteService {
         return this.setItemType(rowIndex, nextType);
     }
 
+    /**
+     * [REVISED] Now returns an array with the changed row index, or an empty array.
+     */
     setItemType(rowIndex, newType) {
         const item = this.getItems()[rowIndex];
         if (item && item.fabricType !== newType) {
             item.fabricType = newType;
             item.linePrice = null;
-            
-            // [NEW] Clear fabric name and color on type change as per new requirement.
             item.fabric = '';
             item.color = '';
-
-            return true;
+            return [rowIndex]; // [REVISED] Return index of changed row
         }
-        return false;
+        return []; // [REVISED] Return empty array
     }
 
+    /**
+     * [REVISED] Now returns an array of all changed row indexes.
+     */
     batchUpdateFabricType(newType) {
         const items = this.getItems();
-        let changed = false;
-        items.forEach(item => {
+        const changedIndexes = [];
+        items.forEach((item, index) => {
             if (item.width && item.height) {
                 if (item.fabricType !== newType) {
                     item.fabricType = newType;
                     item.linePrice = null;
-
-                    // [NEW] Clear fabric name and color on type change as per new requirement.
                     item.fabric = '';
                     item.color = '';
-                    
-                    changed = true;
+                    changedIndexes.push(index); // [REVISED] Add index to the list
                 }
             }
         });
-        return changed;
+        return changedIndexes; // [REVISED] Return the list of indexes
     }
 
+    /**
+     * [REVISED] Now returns an array of the changed row indexes from the selection.
+     */
     batchUpdateFabricTypeForSelection(selectedIndexes, newType) {
         const items = this.getItems();
-        let changed = false;
+        const changedIndexes = [];
         for (const index of selectedIndexes) {
             const item = items[index];
             if (item && item.width && item.height) {
                 if (item.fabricType !== newType) {
                     item.fabricType = newType;
                     item.linePrice = null;
-
-                    // [NEW] Clear fabric name and color on type change as per new requirement.
                     item.fabric = '';
                     item.color = '';
-
-                    changed = true;
+                    changedIndexes.push(index); // [REVISED] Add index to the list
                 }
             }
         }
-        return changed;
+        return changedIndexes; // [REVISED] Return the list of indexes
     }
 
     reset() {
-        // [REFACTORED] Reset the entire quoteData object from the initial state blueprint.
         this.quoteData = JSON.parse(JSON.stringify(this.initialState.quoteData));
     }
 
