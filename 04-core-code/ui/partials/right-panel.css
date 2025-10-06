@@ -177,23 +177,19 @@
     background-color: #fffacd;
 }
 
-/* [NEW] Styles for the new component header group */
-.f1-component-header-group {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 4px 0;
-    margin-bottom: 8px; /* Add some space below */
-}
+/* [REVISED] Styles for the component cost header row */
 .f1-component-header {
+    justify-content: flex-start; /* Align text to the left */
     font-weight: bold;
-    font-size: 1.1em;
+    font-size: 1em; /* Slightly smaller font */
     color: #1f2937;
+    padding-left: 4px;
 }
-.f1-component-header-group .f1-price-display {
+
+#f1-price-total {
     font-size: 1.1em;
     font-weight: bold;
     color: #c0392b; /* Red color for emphasis */
-    background-color: #fff;
-    min-width: 80px; /* Ensure it has some width */
+    background-color: #fff; /* White background */
+    border: 1px solid #ef4444; /* Red border */
 }
