@@ -15,23 +15,25 @@ export class DualChainView {
 
     /**
      * Handles the toggling of modes (dual, chain).
+     * Validation now ONLY runs when EXITING dual mode.
      */
     handleModeChange({ mode }) {
         const currentMode = this.uiService.getState().dualChainMode;
         const newMode = currentMode === mode ? null : mode;
 
-        // When exiting a mode, perform final validation and calculations.
+        // When attempting to EXIT dual mode, perform the final validation.
         if (currentMode === 'dual') {
-            const isValid = this.recalculateDualPrice(); // Recalculate sale price and validate
+            const isValid = this._validateDualSelection();
             if (!isValid) {
-                return; // If validation fails, do not exit the mode.
+                return; // If validation fails, block the user from exiting the mode.
             }
         }
         
         this.uiService.setDualChainMode(newMode);
 
         if (newMode === 'dual') {
-            this.uiService.setDualPrice(null);
+            // When entering the mode, ensure the price is calculated and displayed based on the current state.
+            this._calculateAndStoreDualPrice();
         }
         
         if (!newMode) {
@@ -43,12 +45,30 @@ export class DualChainView {
     }
 
     /**
-     * Calculates the price for Dual brackets and updates the UI service.
+     * [NEW] This method PURELY calculates the price and updates state. It contains NO validation logic.
+     * This is the key to achieving real-time updates without premature warnings.
      */
-    recalculateDualPrice() {
+    _calculateAndStoreDualPrice() {
         const items = this.quoteService.getItems();
         const productType = this.quoteService.getCurrentProductType();
+        
+        // Calculate the price based on the current items.
+        const price = this.calculationService.calculateAccessoryPrice(productType, 'dual', { items });
+        
+        // Store the price in the core data service and the UI service.
+        this.quoteService.updateAccessorySummary({ dualCostSum: price });
+        this.uiService.setDualPrice(price);
+        
+        // Immediately trigger a recalculation of the grand total on the K5 summary.
+        this._updateSummaryAccessoriesTotal();
+    }
 
+    /**
+     * [NEW] This method PURELY validates the selection. It does NOT calculate any price.
+     * It is only called when the user tries to exit the dual mode.
+     */
+    _validateDualSelection() {
+        const items = this.quoteService.getItems();
         const selectedIndexes = items.reduce((acc, item, index) => {
             if (item.dual === 'D') {
                 acc.push(index);
@@ -59,7 +79,7 @@ export class DualChainView {
         const dualCount = selectedIndexes.length;
 
         // Rule 1: The total count must be an even number.
-        if (dualCount % 2 !== 0) {
+        if (dualCount > 0 && dualCount % 2 !== 0) {
             this.eventAggregator.publish('showNotification', {
                 message: 'The total count of Dual Brackets (D) must be an even number. Please correct the selection.',
                 type: 'error'
@@ -78,9 +98,6 @@ export class DualChainView {
             }
         }
         
-        const price = this.calculationService.calculateAccessoryPrice(productType, 'dual', { items });
-        this.quoteService.updateAccessorySummary({ dualCostSum: price });
-        this._updateSummaryAccessoriesTotal(); // Recalculate the total immediately.
         return true; // Indicate success
     }
 
@@ -119,6 +136,10 @@ export class DualChainView {
         if (dualChainMode === 'dual' && column === 'dual') {
             const newValue = item.dual === 'D' ? '' : 'D';
             this.quoteService.updateItemProperty(rowIndex, 'dual', newValue);
+
+            // [FIX] Call the new, validation-free calculation method for instant feedback.
+            this._calculateAndStoreDualPrice();
+
             this.publish();
         }
 
@@ -141,17 +162,10 @@ export class DualChainView {
     activate() {
         this.uiService.setVisibleColumns(['sequence', 'fabricTypeDisplay', 'location', 'dual', 'chain']);
         
-        const currentState = this.uiService.getState();
-        const currentProductData = this.quoteService.getCurrentProductData();
-
-        this.uiService.setSummaryWinderPrice(currentState.driveWinderTotalPrice);
-        this.uiService.setSummaryMotorPrice(currentState.driveMotorTotalPrice);
-        this.uiService.setSummaryRemotePrice(currentState.driveRemoteTotalPrice);
-        this.uiService.setSummaryChargerPrice(currentState.driveChargerTotalPrice);
-        this.uiService.setSummaryCordPrice(currentState.driveCordTotalPrice);
-        this.uiService.setDualPrice(currentProductData.summary.dualCostSum);
-
+        // Ensure the grand total is synchronized and correct when entering the tab.
         this._updateSummaryAccessoriesTotal();
+
+        this.publish();
     }
 
     /**
@@ -159,14 +173,15 @@ export class DualChainView {
      */
     _updateSummaryAccessoriesTotal() {
         const state = this.uiService.getState();
-        const currentProductData = this.quoteService.getCurrentProductData();
+        const currentProductData = this.quoteService.getQuoteData().products[this.quoteService.getCurrentProductType()];
         
-        const dualPrice = currentProductData.summary.dualCostSum || 0;
-        const winderPrice = state.summaryWinderPrice || 0;
-        const motorPrice = state.summaryMotorPrice || 0;
-        const remotePrice = state.summaryRemotePrice || 0;
-        const chargerPrice = state.summaryChargerPrice || 0;
-        const cordPrice = state.summaryCordPrice || 0;
+        // This ensures all values are up-to-date before summing.
+        const dualPrice = currentProductData.summary.accessories.dualCostSum || 0;
+        const winderPrice = state.driveWinderTotalPrice || 0;
+        const motorPrice = state.driveMotorTotalPrice || 0;
+        const remotePrice = state.driveRemoteTotalPrice || 0;
+        const chargerPrice = state.driveChargerTotalPrice || 0;
+        const cordPrice = state.driveCordTotalPrice || 0;
 
         const total = dualPrice + winderPrice + motorPrice + remotePrice + chargerPrice + cordPrice;
         
