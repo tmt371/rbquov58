@@ -231,6 +231,27 @@ export class K2FabricView {
      * This method is called by the main DetailConfigView when the K2 tab becomes active.
      */
     activate() {
+        // [NEW] Check for items that have a type but are missing fabric details.
+        const items = this.quoteService.getItems();
+        const needsAttention = items.some(item => item.fabricType && (!item.fabric || !item.color));
+
+        if (needsAttention) {
+            this.eventAggregator.publish('showConfirmationDialog', {
+                message: '系統檢測到部分品項在變更 TYPE 後，其布料名稱 (F-NAME) 或顏色 (F-COLOR) 需要重新設定。請檢查並完成輸入。',
+                layout: [
+                    [
+                        { 
+                            type: 'button', 
+                            text: '確定', 
+                            colspan: 3,
+                            className: 'primary-confirm-button',
+                            callback: () => true 
+                        }
+                    ]
+                ]
+            });
+        }
+
         this.uiService.setVisibleColumns(['sequence', 'fabricTypeDisplay', 'fabric', 'color']);
     }
 }

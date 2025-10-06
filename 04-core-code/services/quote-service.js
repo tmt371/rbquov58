@@ -272,6 +272,11 @@ export class QuoteService {
         if (item && item.fabricType !== newType) {
             item.fabricType = newType;
             item.linePrice = null;
+            
+            // [NEW] Clear fabric name and color on type change as per new requirement.
+            item.fabric = '';
+            item.color = '';
+
             return true;
         }
         return false;
@@ -285,8 +290,12 @@ export class QuoteService {
                 if (item.fabricType !== newType) {
                     item.fabricType = newType;
                     item.linePrice = null;
-                    changed = true;
 
+                    // [NEW] Clear fabric name and color on type change as per new requirement.
+                    item.fabric = '';
+                    item.color = '';
+                    
+                    changed = true;
                 }
             }
         });
@@ -302,6 +311,11 @@ export class QuoteService {
                 if (item.fabricType !== newType) {
                     item.fabricType = newType;
                     item.linePrice = null;
+
+                    // [NEW] Clear fabric name and color on type change as per new requirement.
+                    item.fabric = '';
+                    item.color = '';
+
                     changed = true;
                 }
             }
