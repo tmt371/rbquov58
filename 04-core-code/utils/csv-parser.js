@@ -5,28 +5,44 @@
  */
 
 /**
- * Converts the application's quote data object into a CSV formatted string.
+ * [REVISED] Converts the application's quote data object into a comprehensive CSV formatted string,
+ * including all detailed item properties.
  * @param {object} quoteData The application's quote data.
  * @returns {string} A string in CSV format.
  */
 export function dataToCsv(quoteData) {
-    // [REFACTORED] Get the current product's data from the new structure.
     const currentProductKey = quoteData?.currentProduct;
     const productData = quoteData?.products?.[currentProductKey];
 
     if (!productData || !productData.items) return "";
 
-    const headers = ['#', 'Width', 'Height', 'Type', 'Price'];
+    // [NEW] Expanded headers to include all item details.
+    const headers = [
+        '#', 'Width', 'Height', 'Type', 'Price', 
+        'Location', 'F-Name', 'F-Color', 'Over', 'O/I', 'L/R', 
+        'Dual', 'Chain', 'Winder', 'Motor'
+    ];
     
     const rows = productData.items.map((item, index) => {
-        // Only include rows that have some data
+        // Only include rows that have some data (width or height).
         if (item.width || item.height) {
+            // [NEW] Expanded row data to match the new headers.
             const rowData = [
                 index + 1,
                 item.width || '',
                 item.height || '',
                 item.fabricType || '',
-                item.linePrice || ''
+                item.linePrice !== null ? item.linePrice.toFixed(2) : '',
+                item.location || '',
+                item.fabric || '',
+                item.color || '',
+                item.over || '',
+                item.oi || '',
+                item.lr || '',
+                item.dual || '',
+                item.chain || '',
+                item.winder || '',
+                item.motor || ''
             ];
             // Basic CSV escaping: if a value contains a comma, wrap it in double quotes.
             return rowData.map(value => {
@@ -38,12 +54,12 @@ export function dataToCsv(quoteData) {
             }).join(',');
         }
         return null;
-    }).filter(row => row !== null); // Filter out empty rows
+    }).filter(row => row !== null); // Filter out empty/unprocessed rows
 
-    // [REFACTORED] Get total sum from the product-specific summary.
     const totalSum = productData.summary ? productData.summary.totalSum : null;
     let summaryRow = '';
     if (typeof totalSum === 'number') {
+        // Create a summary row with enough commas to align the total under the 'Price' column.
         summaryRow = `\n\nTotal,,,,${totalSum.toFixed(2)}`;
     }
 
@@ -59,20 +75,20 @@ export function dataToCsv(quoteData) {
 export function csvToData(csvString) {
     try {
         const lines = csvString.trim().split('\n');
-        // Find the header row, assuming it's the first non-empty line
         const headerIndex = lines.findIndex(line => line.trim() !== '');
-        if (headerIndex === -1) return null; // No content
+        if (headerIndex === -1) return null;
 
         const dataLines = lines.slice(headerIndex + 1);
 
         const items = [];
         for (const line of dataLines) {
             const trimmedLine = line.trim();
-            // Stop if we hit an empty line or the summary section
             if (!trimmedLine || trimmedLine.toLowerCase().startsWith('total')) {
                 break;
             }
 
+            // This CSV parser is simple and doesn't handle commas within quoted strings.
+            // For this application's import needs, a simple split is sufficient.
             const values = trimmedLine.split(',');
 
             const item = {
@@ -80,28 +96,37 @@ export function csvToData(csvString) {
                 width: parseInt(values[1], 10) || null,
                 height: parseInt(values[2], 10) || null,
                 fabricType: values[3] || null,
-                linePrice: parseFloat(values[4]) || null
+                linePrice: parseFloat(values[4]) || null,
+                // [NEW] Attempt to parse the additional fields, defaulting to empty strings.
+                location: values[5] || '',
+                fabric: values[6] || '',
+                color: values[7] || '',
+                over: values[8] || '',
+                oi: values[9] || '',
+                lr: values[10] || '',
+                dual: values[11] || '',
+                chain: parseInt(values[12], 10) || null,
+                winder: values[13] || '',
+                motor: values[14] || ''
             };
             items.push(item);
         }
 
-        // Add a final empty row for new entries
-        items.push({
-            itemId: `item-${Date.now()}-new`,
-            width: null, height: null, fabricType: null, linePrice: null
-        });
+        // Add a final empty row for new entries.
+        const productStrategy = this.productFactory.getProductStrategy('rollerBlind');
+        const newItem = productStrategy ? productStrategy.getInitialItemData() : {};
+        newItem.itemId = `item-${Date.now()}-new`;
+        items.push(newItem);
 
-        // [REFACTORED] Construct the full, new generic state structure.
-        // We assume CSV import is always for the primary 'rollerBlind' product.
+        // Construct the full, new generic state structure.
         return {
             currentProduct: 'rollerBlind',
             products: {
                 rollerBlind: {
                     items: items,
-                    summary: {} // Summary will be recalculated later
+                    summary: {} // Summary will be recalculated later.
                 }
             },
-            // Add other global properties with default values
             quoteId: null,
             issueDate: null,
             dueDate: null,
