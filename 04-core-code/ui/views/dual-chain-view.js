@@ -80,6 +80,7 @@ export class DualChainView {
         
         const price = this.calculationService.calculateAccessoryPrice(productType, 'dual', { items });
         this.quoteService.updateAccessorySummary({ dualCostSum: price });
+        this._updateSummaryAccessoriesTotal(); // Recalculate the total immediately.
         return true; // Indicate success
     }
 
