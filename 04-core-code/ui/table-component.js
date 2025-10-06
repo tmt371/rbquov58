@@ -103,7 +103,7 @@ export class TableComponent {
         if (targetCell && index === targetCell.rowIndex && key === targetCell.column) {
             cell.classList.add('target-cell');
         }
-        if (lfModifiedRowIndexes.has(index) && (key === 'fabric' || key === 'color')) {
+        if (lfModifiedRowIndexes.includes(index) && (key === 'fabric' || key === 'color')) {
             cell.classList.add('is-lf-modified');
         }
 
@@ -124,11 +124,11 @@ export class TableComponent {
                 cell.textContent = index + 1;
                 const isLastRowEmpty = (index === items.length - 1) && (!item.width && !item.height);
                 
-                if (lfSelectedRowIndexes.has(index)) {
+                if (lfSelectedRowIndexes.includes(index)) {
                     cell.classList.add('lf-selection-highlight');
                 } else if (isMultiSelectMode) {
                     if (isLastRowEmpty) cell.classList.add('selection-disabled');
-                    else if (multiSelectSelectedIndexes.has(index)) cell.classList.add('multi-selected-row');
+                    else if (multiSelectSelectedIndexes.includes(index)) cell.classList.add('multi-selected-row');
                 } else if (index === selectedRowIndex) {
                     cell.classList.add('selected-row-highlight');
                 }
