@@ -157,12 +157,24 @@ export class DualChainView {
     }
     
     /**
-     * This method is called by the main DetailConfigView when the K5 tab becomes active.
+     * [REVISED] This method is called by the main DetailConfigView when the K5 tab becomes active.
+     * It now correctly synchronizes all accessory prices from the K4 state.
      */
     activate() {
         this.uiService.setVisibleColumns(['sequence', 'fabricTypeDisplay', 'location', 'dual', 'chain']);
         
-        // Ensure the grand total is synchronized and correct when entering the tab.
+        const currentState = this.uiService.getState();
+        const currentProductData = this.quoteService.getCurrentProductData();
+
+        // [FIX] These crucial lines synchronize the prices from the K4 view state into the K5 summary state.
+        this.uiService.setSummaryWinderPrice(currentState.driveWinderTotalPrice);
+        this.uiService.setSummaryMotorPrice(currentState.driveMotorTotalPrice);
+        this.uiService.setSummaryRemotePrice(currentState.driveRemoteTotalPrice);
+        this.uiService.setSummaryChargerPrice(currentState.driveChargerTotalPrice);
+        this.uiService.setSummaryCordPrice(currentState.driveCordTotalPrice);
+        this.uiService.setDualPrice(currentProductData.summary.accessories.dualCostSum);
+
+        // After synchronizing, calculate the grand total.
         this._updateSummaryAccessoriesTotal();
 
         this.publish();
@@ -173,15 +185,14 @@ export class DualChainView {
      */
     _updateSummaryAccessoriesTotal() {
         const state = this.uiService.getState();
-        const currentProductData = this.quoteService.getQuoteData().products[this.quoteService.getCurrentProductType()];
         
-        // This ensures all values are up-to-date before summing.
-        const dualPrice = currentProductData.summary.accessories.dualCostSum || 0;
-        const winderPrice = state.driveWinderTotalPrice || 0;
-        const motorPrice = state.driveMotorTotalPrice || 0;
-        const remotePrice = state.driveRemoteTotalPrice || 0;
-        const chargerPrice = state.driveChargerTotalPrice || 0;
-        const cordPrice = state.driveCordTotalPrice || 0;
+        // The values are now correctly populated in the UI state before this method is called.
+        const dualPrice = state.dualPrice || 0;
+        const winderPrice = state.summaryWinderPrice || 0;
+        const motorPrice = state.summaryMotorPrice || 0;
+        const remotePrice = state.summaryRemotePrice || 0;
+        const chargerPrice = state.summaryChargerPrice || 0;
+        const cordPrice = state.summaryCordPrice || 0;
 
         const total = dualPrice + winderPrice + motorPrice + remotePrice + chargerPrice + cordPrice;
         
