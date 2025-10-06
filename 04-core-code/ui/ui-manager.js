@@ -71,29 +71,32 @@ export class UIManager {
         resizeObserver.observe(this.appElement);
     }
 
-    _updateExpandedPanelPosition() {
+_updateExpandedPanelPosition() {
         if (!this.leftPanelElement || !this.numericKeyboardPanel) return;
 
-        const keyboardToggle = this.numericKeyboardPanel.querySelector('#panel-toggle');
+        const key7 = this.numericKeyboardPanel.querySelector('#key-7');
+        const key0 = this.numericKeyboardPanel.querySelector('#key-0');
         const typeKey = this.numericKeyboardPanel.querySelector('#key-type');
 
-        if (!keyboardToggle || !typeKey) {
+        if (!key7 || !key0 || !typeKey) {
             console.error("One or more reference elements for panel positioning are missing.");
             return;
         }
 
-        const keyboardToggleRect = keyboardToggle.getBoundingClientRect();
+        const key7Rect = key7.getBoundingClientRect();
+        const key0Rect = key0.getBoundingClientRect();
         const typeKeyRect = typeKey.getBoundingClientRect();
-        const viewportHeight = window.innerHeight;
 
-        const newTop = keyboardToggleRect.bottom;
+        const newTop = key7Rect.top;
         const newWidth = typeKeyRect.left + (typeKeyRect.width / 2);
-        const newHeight = viewportHeight - newTop;
+        const newHeight = key0Rect.bottom - key7Rect.top;
 
         this.leftPanelElement.style.top = `${newTop}px`;
         this.leftPanelElement.style.width = `${newWidth}px`;
         this.leftPanelElement.style.height = `${newHeight}px`;
 
+        // [FIX ADDED] Set the calculated width as a CSS variable for the toggle to use.
+        this.leftPanelElement.style.setProperty('--left-panel-width', `${newWidth}px`);
     }
 
     render(state) {
