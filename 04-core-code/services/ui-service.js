@@ -9,6 +9,8 @@ import { initialState } from '../config/initial-state.js';
 export class UIService {
     constructor({ stateService }) {
         this.stateService = stateService;
+        // The _initializeUIState method is no longer strictly necessary since initialState is now complete,
+        // but it's kept as a safeguard for future development to ensure no missing properties break the app.
         this._initializeUIState();
         console.log("UIService refactored to be a stateless logic processor.");
     }
@@ -18,44 +20,8 @@ export class UIService {
         let { ui } = currentState;
         let needsUpdate = false;
 
-        const defaults = {
-            isMultiSelectMode: false,
-            multiSelectSelectedIndexes: [],
-            locationInputValue: '',
-            targetCell: null,
-            activeEditMode: null,
-            lfSelectedRowIndexes: [],
-            lfModifiedRowIndexes: [],
-            dualChainMode: null,
-            dualChainInputValue: '',
-            dualPrice: null,
-            welcomeDialogShown: false,
-            driveAccessoryMode: null,
-            driveRemoteCount: 0,
-            driveChargerCount: 0,
-            driveCordCount: 0,
-            driveWinderTotalPrice: null,
-            driveMotorTotalPrice: null,
-            driveRemoteTotalPrice: null,
-            driveChargerTotalPrice: null,
-            driveCordTotalPrice: null,
-            driveGrandTotal: null,
-            summaryWinderPrice: null,
-            summaryMotorPrice: null,
-            summaryRemotePrice: null,
-            summaryChargerPrice: null,
-            summaryCordPrice: null,
-            summaryAccessoriesTotal: null,
-            f2: {
-                wifiQty: null, deliveryQty: null, installQty: null, removalQty: null,
-                mulTimes: null, discount: null, wifiSum: null, deliveryFee: null,
-                installFee: null, removalFee: null, deliveryFeeExcluded: false,
-                installFeeExcluded: false, removalFeeExcluded: false, acceSum: null,
-                eAcceSum: null, surchargeFee: null, totalSumForRbTime: null,
-                firstRbPrice: null, disRbPrice: null, singleprofit: null,
-                rbProfit: null, sumPrice: null, sumProfit: null, gst: null, netProfit: null
-            }
-        };
+        // Use the now-complete initialState.ui as the source of truth for defaults
+        const defaults = initialState.ui;
 
         for (const key in defaults) {
             if (ui[key] === undefined) {
@@ -84,7 +50,7 @@ export class UIService {
         return ui;
     }
 
-    // [NEW] Added a reset method to restore the UI state to its initial value.
+    // [CONFIRMED] This method now works correctly because initialState.ui is complete.
     reset() {
         this._updateUiState(ui => JSON.parse(JSON.stringify(initialState.ui)));
     }
@@ -148,7 +114,6 @@ export class UIService {
     }
 
     setSumOutdated(isOutdated) {
-        // [CORRECTED] Changed the value from the undefined 'isSumOutdated' to the passed argument 'isOutdated'.
         this._updateUiState(ui => ({ ...ui, isSumOutdated: isOutdated }));
     }
 

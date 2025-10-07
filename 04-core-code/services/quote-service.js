@@ -5,6 +5,7 @@
  * Acts as the single source of truth for the quoteData state object.
  * It contains all the business logic for mutating the quote data.
  */
+import { initialState } from '../config/initial-state.js';
 
 export class QuoteService {
     constructor({ stateService, productFactory, configManager }) {
@@ -39,8 +40,6 @@ export class QuoteService {
         return quoteData;
     }
     
-    // [NEW] Added a method to set the entire quoteData object.
-    // This is used after a full recalculation.
     setQuoteData(newQuoteData) {
         const currentState = this.stateService.getState();
         this.stateService.updateState({ ...currentState, quoteData: newQuoteData });
@@ -405,10 +404,12 @@ export class QuoteService {
         });
     }
 
+    // [CORRECTED] Fully implemented the reset method.
     reset() {
-        // This needs access to the absolute initial state, which StateService should provide.
-        // For now, this is a simplified implementation. Awaiting StateService enhancement.
-        console.warn("QuoteService.reset() is not fully implemented pending StateService enhancements.");
+        const currentState = this.stateService.getState();
+        // Create a deep copy to prevent mutating the original initialState constant
+        const newQuoteData = JSON.parse(JSON.stringify(initialState.quoteData));
+        this.stateService.updateState({ ...currentState, quoteData: newQuoteData });
     }
 
     hasData() {

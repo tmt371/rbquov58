@@ -3,6 +3,8 @@
 /**
  * @fileoverview Defines the initial state of the application.
  * This structure serves as the default blueprint for the entire app's data.
+ * [v5.91 REVISION]: This file has been updated to include all UI state properties
+ * to ensure a complete and successful application reset.
  */
 
 export const initialState = {
@@ -10,61 +12,81 @@ export const initialState = {
         // --- SPA View Management ---
         currentView: 'QUICK_QUOTE', 
         visibleColumns: ['sequence', 'width', 'height', 'TYPE', 'Price'],
-        activeTabId: 'k1-tab', // Tracks the active tab in the left panel
+        activeTabId: 'k1-tab',
 
         // --- Input & Selection State ---
         inputValue: '',
         inputMode: 'width',
-        isEditing: false,
         activeCell: { rowIndex: 0, column: 'width' },
         selectedRowIndex: null,
+        isMultiSelectMode: false,
+        multiSelectSelectedIndexes: [],
 
-        // --- K5 Accessory UI State ---
-        k5ActiveMode: null, // 'winder', 'motor', 'remote', 'charger', 'cord'
-        k5RemoteCount: 0,
-        k5ChargerCount: 0,
-        k5CordCount: 0,
-        k5WinderTotalPrice: null,
-        k5MotorTotalPrice: null,
-        k5RemoteTotalPrice: null,
-        k5ChargerTotalPrice: null,
-        k5CordTotalPrice: null,
+        // --- Left Panel Edit Modes & States ---
+        activeEditMode: null,       // 'K1', 'K2', 'K2_LF_SELECT', 'K3' etc.
+        targetCell: null,           // Used for targeted edits (e.g., location, chain)
+        locationInputValue: '',
+        
+        // --- K2 (Fabric/LF) State ---
+        lfSelectedRowIndexes: [],
+        lfModifiedRowIndexes: [],
 
-        // --- F1 Remote Distribution ---
+        // --- K5 (Dual/Chain) State ---
+        dualChainMode: null,        // 'dual' or 'chain'
+        dualChainInputValue: '',
+        dualPrice: null,
+
+        // --- K4 (Drive/Accessories) State ---
+        driveAccessoryMode: null,   // 'winder', 'motor', 'remote', etc.
+        driveRemoteCount: 0,
+        driveChargerCount: 0,
+        driveCordCount: 0,
+        driveWinderTotalPrice: null,
+        driveMotorTotalPrice: null,
+        driveRemoteTotalPrice: null,
+        driveChargerTotalPrice: null,
+        driveCordTotalPrice: null,
+        driveGrandTotal: null,
+
+        // --- K5 Summary Display State ---
+        summaryWinderPrice: null,
+        summaryMotorPrice: null,
+        summaryRemotePrice: null,
+        summaryChargerPrice: null,
+        summaryCordPrice: null,
+        summaryAccessoriesTotal: null,
+
+        // --- F1 Remote Distribution State ---
         f1_remote_1ch_qty: 0,
-        f1_remote_16ch_qty: null
+        f1_remote_16ch_qty: null,
+        
+        // --- F2 Financial Summary State ---
+        f2: {
+            wifiQty: null, deliveryQty: null, installQty: null, removalQty: null,
+            mulTimes: null, discount: null, wifiSum: null, deliveryFee: null,
+            installFee: null, removalFee: null, deliveryFeeExcluded: false,
+            installFeeExcluded: false, removalFeeExcluded: false, acceSum: null,
+            eAcceSum: null, surchargeFee: null, totalSumForRbTime: null,
+            firstRbPrice: null, disRbPrice: null, singleprofit: null,
+            rbProfit: null, sumPrice: null, sumProfit: null, gst: null, netProfit: null
+        },
+
+        // --- Global UI State ---
+        isSumOutdated: false,
+        welcomeDialogShown: false
     },
     quoteData: {
-        // [NEW] Added to track the active product.
         currentProduct: 'rollerBlind',
-
-        // [NEW] A generic container for different product types.
         products: {
-            // [REFACTORED] The 'rollerBlind' specific data is now nested.
             rollerBlind: {
-                // [REFACTORED] Renamed from 'rollerBlindItems' to 'items' for genericity.
                 items: [
                     { 
                         itemId: `item-${Date.now()}`, 
-                        // --- Phase 1 Fields ---
-                        width: null, 
-                        height: null, 
-                        fabricType: null, 
-                        linePrice: null,
-                        // --- Phase 2 Fields ---
-                        location: '',
-                        fabric: '',
-                        color: '',
-                        over: '',
-                        oi: '',
-                        lr: '',
-                        dual: '',
-                        chain: null,
-                        winder: '',
-                        motor: ''
+                        width: null, height: null, fabricType: null, linePrice: null,
+                        location: '', fabric: '', color: '', over: '',
+                        oi: '', lr: '', dual: '', chain: null, winder: '', motor: ''
                     }
                 ],
-                // [REFACTORED] The summary is now encapsulated with its product.
                 summary: { 
                     totalSum: null,
                     accessories: {
@@ -82,8 +104,6 @@ export const initialState = {
                 }
             }
         },
-        
-        // --- Global Quote Properties ---
         quoteId: null,
         issueDate: null,
         dueDate: null,
