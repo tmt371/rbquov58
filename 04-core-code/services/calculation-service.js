@@ -5,7 +5,8 @@
  * Acts as a generic executor that delegates product-specific logic to a strategy.
  */
 export class CalculationService {
-    constructor({ productFactory, configManager }) {
+    constructor({ stateService, productFactory, configManager }) {
+        this.stateService = stateService; // Added for consistency, though not heavily used yet.
         this.productFactory = productFactory;
         this.configManager = configManager;
         console.log("CalculationService Initialized.");
@@ -13,6 +14,8 @@ export class CalculationService {
 
     /**
      * Calculates line prices for all valid items and the total sum using a provided product strategy.
+     * This method is purely functional: it receives data and returns a new object with the results,
+     * without causing any side effects or state mutations.
      */
     calculateAndSum(quoteData, productStrategy) {
         if (!productStrategy) {
@@ -20,24 +23,19 @@ export class CalculationService {
             return { quoteData, firstError: { message: "Product strategy not provided." } };
         }
 
-        const updatedQuoteData = JSON.parse(JSON.stringify(quoteData));
+        const currentProductKey = quoteData.currentProduct;
+        const currentProductData = quoteData.products[currentProductKey];
         
-        // [REFACTORED] Dynamically get items and summary from the current product's data.
-        const currentProductKey = updatedQuoteData.currentProduct;
-        const currentProductData = updatedQuoteData.products[currentProductKey];
-        const items = currentProductData.items; 
-        const summary = currentProductData.summary;
-
         let firstError = null;
 
-        items.forEach((item, index) => {
-            item.linePrice = null;
+        const newItems = currentProductData.items.map((item, index) => {
+            const newItem = { ...item, linePrice: null };
             if (item.width && item.height && item.fabricType) {
                 const priceMatrix = this.configManager.getPriceMatrix(item.fabricType);
                 const result = productStrategy.calculatePrice(item, priceMatrix);
                 
                 if (result.price !== null) {
-                    item.linePrice = result.price;
+                    newItem.linePrice = result.price;
                 } else if (result.error && !firstError) {
                     const errorColumn = result.error.toLowerCase().includes('width') ? 'width' : 'height';
                     firstError = {
@@ -47,13 +45,15 @@ export class CalculationService {
                     };
                 }
             }
+            return newItem;
         });
 
-        const itemsTotal = items.reduce((sum, item) => sum + (item.linePrice || 0), 0);
+        const itemsTotal = newItems.reduce((sum, item) => sum + (item.linePrice || 0), 0);
         
         let accessoriesTotal = 0;
-        if (summary && summary.accessories) {
-            const acc = summary.accessories;
+        const currentSummary = currentProductData.summary;
+        if (currentSummary && currentSummary.accessories) {
+            const acc = currentSummary.accessories;
             accessoriesTotal += acc.winder?.price || 0;
             accessoriesTotal += acc.motor?.price || 0;
             accessoriesTotal += acc.remote?.price || 0;
@@ -61,8 +61,24 @@ export class CalculationService {
             accessoriesTotal += acc.cord3m?.price || 0;
         }
 
-        // [REFACTORED] Update the total sum within the product-specific summary.
-        summary.totalSum = itemsTotal + accessoriesTotal;
+        const newSummary = {
+            ...currentSummary,
+            totalSum: itemsTotal + accessoriesTotal
+        };
+
+        const newProductData = {
+            ...currentProductData,
+            items: newItems,
+            summary: newSummary
+        };
+
+        const updatedQuoteData = {
+            ...quoteData,
+            products: {
+                ...quoteData.products,
+                [currentProductKey]: newProductData
+            }
+        };
 
         return { updatedQuoteData, firstError };
     }

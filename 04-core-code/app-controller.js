@@ -6,8 +6,9 @@ const AUTOSAVE_STORAGE_KEY = 'quoteAutoSaveData';
 const AUTOSAVE_INTERVAL_MS = 60000;
 
 export class AppController {
-    constructor({ eventAggregator, uiService, quoteService, fileService, quickQuoteView, detailConfigView, calculationService, productFactory }) {
+    constructor({ eventAggregator, stateService, uiService, quoteService, fileService, quickQuoteView, detailConfigView, calculationService, productFactory }) {
         this.eventAggregator = eventAggregator;
+        this.stateService = stateService;
         this.uiService = uiService;
         this.quoteService = quoteService;
         this.fileService = fileService;
@@ -32,6 +33,13 @@ export class AppController {
         this._subscribeGlobalEvents();
         this._subscribeF2Events();
         
+        // This is the core of the reactive state update.
+        // Any service that updates the state via StateService will trigger this,
+        // which in turn re-renders the UI.
+        this.eventAggregator.subscribe('_internalStateUpdated', (newState) => {
+            this.eventAggregator.publish('stateChanged', newState);
+        });
+
         this._startAutoSave();
     }
     
@@ -57,22 +65,23 @@ export class AppController {
 
     _subscribeDetailViewEvents() {
         const delegate = (handlerName, data) => {
-            if (this.uiService.getState().currentView === 'DETAIL_CONFIG') {
+            const { ui } = this.stateService.getState();
+            if (ui.currentView === 'DETAIL_CONFIG') {
                 this.detailConfigView[handlerName](data);
             }
         };
         
         this.eventAggregator.subscribe('tableCellClicked', (data) => {
-            const currentView = this.uiService.getState().currentView;
-            if (currentView === 'QUICK_QUOTE') {
+            const { ui } = this.stateService.getState();
+            if (ui.currentView === 'QUICK_QUOTE') {
                 this.quickQuoteView.handleTableCellClick(data);
             } else {
                 this.detailConfigView.handleTableCellClick(data);
             }
         });
          this.eventAggregator.subscribe('sequenceCellClicked', (data) => {
-            const currentView = this.uiService.getState().currentView;
-            if (currentView === 'QUICK_QUOTE') {
+            const { ui } = this.stateService.getState();
+            if (ui.currentView === 'QUICK_QUOTE') {
                 this.quickQuoteView.handleSequenceCellClick(data);
             } else {
                 this.detailConfigView.handleSequenceCellClick(data);
@@ -93,9 +102,6 @@ export class AppController {
         this.eventAggregator.subscribe('chainEnterPressed', (data) => delegate('handleChainEnterPressed', data));
         this.eventAggregator.subscribe('driveModeChanged', (data) => delegate('handleDriveModeChange', data));
         this.eventAggregator.subscribe('accessoryCounterChanged', (data) => delegate('handleAccessoryCounterChange', data));
-
-        // [REMOVED] The subscription for the complex remote selection flow is no longer needed.
-        // this.eventAggregator.subscribe('userInitiatedRemoteSelection', () => this._handleRemoteSelection());
     }
 
     _subscribeGlobalEvents() {
@@ -121,13 +127,6 @@ export class AppController {
         this.quoteService.setCostDiscount(percentage);
     }
     
-    // [REMOVED] All methods related to the multi-step remote selection dialog are now obsolete and have been removed.
-    // _cancelRemoteSelection() { ... }
-    // _setSelectedRemoteAndActivate(costKey) { ... }
-    // _showAlphaRemoteDialog() { ... }
-    // _showLinxRemoteDialog() { ... }
-    // _handleRemoteSelection() { ... }
-
     _handleToggleFeeExclusion({ feeType }) {
         this.uiService.toggleF2FeeExclusion(feeType);
         this._calculateF2Summary();
@@ -162,50 +161,43 @@ export class AppController {
     }
     
     _handleF2TabActivation() {
-        const productStrategy = this.productFactory.getProductStrategy(this.quoteService.getCurrentProductType());
-        const { updatedQuoteData } = this.calculationService.calculateAndSum(this.quoteService.getQuoteData(), productStrategy);
-        this.quoteService.quoteData = updatedQuoteData;
+        const { quoteData } = this.stateService.getState();
+        const productStrategy = this.productFactory.getProductStrategy(quoteData.currentProduct);
+        const { updatedQuoteData } = this.calculationService.calculateAndSum(quoteData, productStrategy);
+        
+        const currentState = this.stateService.getState();
+        this.stateService.updateState({ ...currentState, quoteData: updatedQuoteData });
         
         this.detailConfigView.driveAccessoriesView.recalculateAllDriveAccessoryPrices();
-        
-        // [FIX] Updated the function call to the new, refactored method in dual-chain-view.js
         this.detailConfigView.dualChainView._calculateAndStoreDualPrice();
-
         this._calculateF2Summary();
         
         this.eventAggregator.publish('focusElement', { elementId: 'f2-b10-wifi-qty' });
     }
 
     _calculateF2Summary() {
-        const quoteData = this.quoteService.getQuoteData();
-        const f2State = this.uiService.getState().f2;
+        const { quoteData, ui } = this.stateService.getState();
+        const summaryValues = this.calculationService.calculateF2Summary(quoteData, ui.f2);
 
-        const summaryValues = this.calculationService.calculateF2Summary(quoteData, f2State);
-
-        // Update the UI with the new values
         for (const key in summaryValues) {
             this.uiService.setF2Value(key, summaryValues[key]);
         }
-
-        this._publishStateChange();
     }
     
     _handleNavigationToDetailView() {
-        const currentView = this.uiService.getState().currentView;
-        if (currentView === 'QUICK_QUOTE') {
+        const { ui } = this.stateService.getState();
+        if (ui.currentView === 'QUICK_QUOTE') {
             this.uiService.setCurrentView('DETAIL_CONFIG');
             this.detailConfigView.activateTab('k1-tab'); 
         } else {
             this.uiService.setCurrentView('QUICK_QUOTE');
             this.uiService.setVisibleColumns(initialState.ui.visibleColumns);
-            this._publishStateChange();
         }
     }
 
     _handleNavigationToQuickQuoteView() {
         this.uiService.setCurrentView('QUICK_QUOTE');
         this.uiService.setVisibleColumns(initialState.ui.visibleColumns);
-        this._publishStateChange();
     }
 
     _handleTabSwitch({ tabId }) {
@@ -227,10 +219,12 @@ export class AppController {
     _handleFileLoad({ fileName, content }) {
         const result = this.fileService.parseFileContent(fileName, content);
         if (result.success) {
-            this.quoteService.quoteData = result.data;
-            this.uiService.reset(initialState.ui);
-            this.uiService.setSumOutdated(true);
-            this._publishStateChange();
+            const currentState = this.stateService.getState();
+            this.stateService.updateState({
+                ...currentState,
+                quoteData: result.data,
+                ui: { ...initialState.ui, isSumOutdated: true }
+            });
             this.eventAggregator.publish('showNotification', { message: result.message });
         } else {
             this.eventAggregator.publish('showNotification', { message: result.message, type: 'error' });
@@ -238,22 +232,18 @@ export class AppController {
     }
     
     _getFullState() {
-        return {
-            ui: this.uiService.getState(),
-            quoteData: this.quoteService.getQuoteData()
-        };
+        return this.stateService.getState();
     }
     
-    publishInitialState() { this._publishStateChange(); }
-    _publishStateChange() {
+    publishInitialState() {
+        // This is still needed once at the start to render the initial state.
         this.eventAggregator.publish('stateChanged', this._getFullState());
     }
 
     _handleRemoteDistributionRequest() {
-        const uiState = this.uiService.getState();
+        const { ui: uiState } = this.stateService.getState();
         const totalRemoteCount = uiState.driveRemoteCount || 0;
 
-        // Use current distribution if available, otherwise default to 0 and total
         const initial1ch = uiState.f1_remote_1ch_qty;
         const initial16ch = (uiState.f1_remote_16ch_qty === null) ? totalRemoteCount : uiState.f1_remote_16ch_qty;
 
@@ -280,7 +270,7 @@ export class AppController {
 
                             if (isNaN(qty1ch) || isNaN(qty16ch) || qty1ch < 0 || qty16ch < 0) {
                                 this.eventAggregator.publish('showNotification', { message: 'Quantities must be positive numbers.', type: 'error' });
-                                return false; // Prevent closing
+                                return false;
                             }
 
                             if (qty1ch + qty16ch !== totalRemoteCount) {
@@ -288,18 +278,17 @@ export class AppController {
                                     message: `Total must equal ${totalRemoteCount}. Current total: ${qty1ch + qty16ch}.`,
                                     type: 'error'
                                 });
-                                return false; // Prevent closing
+                                return false;
                             }
 
                             this.uiService.setF1RemoteDistribution(qty1ch, qty16ch);
-                            this._publishStateChange();
-                            return true; // Allow closing
+                            return true;
                         }
                     },
                     { type: 'button', text: 'Cancel', className: 'secondary', colspan: 2, callback: () => {} }
                 ]
             ],
-            closeOnOverlayClick: false // Prevent accidental closing
+            closeOnOverlayClick: false
         });
     }
 
@@ -310,11 +299,12 @@ export class AppController {
 
     _handleAutoSave() {
         try {
-            const items = this.quoteService.getItems();
+            const { quoteData } = this.stateService.getState();
+            const items = quoteData.products[quoteData.currentProduct].items;
             if (!items) return;
             const hasContent = items.length > 1 || (items.length === 1 && (items[0].width || items[0].height));
             if (hasContent) {
-                const dataToSave = JSON.stringify(this.quoteService.getQuoteData());
+                const dataToSave = JSON.stringify(quoteData);
                 localStorage.setItem(AUTOSAVE_STORAGE_KEY, dataToSave);
             }
         } catch (error) {

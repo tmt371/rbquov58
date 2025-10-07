@@ -9,6 +9,7 @@ import { AppController } from './app-controller.js';
 import { initialState } from './config/initial-state.js';
 import { ProductFactory } from './strategies/product-factory.js';
 
+import { StateService } from './services/state-service.js';
 import { QuoteService } from './services/quote-service.js';
 import { CalculationService } from './services/calculation-service.js';
 import { FocusService } from './services/focus-service.js';
@@ -91,20 +92,23 @@ class App {
 
         // Services are instantiated here...
         const quoteService = new QuoteService({
-            initialState: startingState,
-            productFactory: productFactory,
+            stateService,
+            productFactory,
             configManager: this.configManager
         });
 
         this.calculationService = new CalculationService({
-            productFactory: productFactory,
+            stateService,
+            productFactory,
             configManager: this.configManager
         });
         const fileService = new FileService();
-        const uiService = new UIService(startingState.ui);
+        const uiService = new UIService({ stateService });
         const focusService = new FocusService({
-            uiService: uiService,
-            quoteService: quoteService
+            stateService,
+            // uiService is kept for now as it might have non-state-related methods.
+            // This will be reviewed when refactoring FocusService.
+            uiService
         });
 
         const publishStateChangeCallback = () => this.eventAggregator.publish('stateChanged', this.appController._getFullState());
@@ -171,6 +175,7 @@ class App {
         
         this.appController = new AppController({
             eventAggregator: this.eventAggregator,
+            stateService,
             uiService,
             quoteService,
             fileService,

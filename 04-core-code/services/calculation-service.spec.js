@@ -1,6 +1,8 @@
 // /04-core-code/services/calculation-service.spec.js
 
 import { CalculationService } from './calculation-service.js';
+import { StateService } from './state-service.js';
+import { EventAggregator } from '../event-aggregator.js';
 
 // --- Mock Dependencies ---
 const mockProductStrategy = {
@@ -49,9 +51,16 @@ const mockConfigManager = {
 // --- Test Suite ---
 describe('CalculationService (Refactored)', () => {
     let calculationService;
+    let stateService;
+    let eventAggregator;
 
     beforeEach(() => {
+        eventAggregator = new EventAggregator();
+        // stateService is mocked here for constructor consistency, though not directly used in these tests.
+        stateService = new StateService({ initialState: {}, eventAggregator });
+
         calculationService = new CalculationService({
+            stateService,
             productFactory: { getProductStrategy: () => mockProductStrategy },
             configManager: mockConfigManager
         });
