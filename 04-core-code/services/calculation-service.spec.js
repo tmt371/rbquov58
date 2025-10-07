@@ -25,7 +25,25 @@ const mockConfigManager = {
     getAccessoryPrice: jest.fn((key) => {
         const prices = { comboBracket: 10, winderHD: 30 };
         return prices[key] || 0;
-    })
+    }),
+    getAccessoryMappings: jest.fn(() => ({
+        accessoryPriceKeyMap: {
+            'dual': 'comboBracket',
+            'winder': 'winderHD',
+            'motor': 'motorStandard',
+            'remote': 'remoteStandard',
+            'charger': 'chargerStandard',
+            'cord': 'cord3m'
+        },
+        accessoryMethodNameMap: {
+            'dual': 'calculateDualPrice',
+            'winder': 'calculateWinderPrice',
+            'motor': 'calculateMotorPrice',
+            'remote': 'calculateRemotePrice',
+            'charger': 'calculateChargerPrice',
+            'cord': 'calculateCordPrice'
+        }
+    }))
 };
 
 // --- Test Suite ---

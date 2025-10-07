@@ -153,5 +153,36 @@
     "cost-A-1ch-remote": { "price": 40 },
     "cost-A-4ch-remote": { "price": 50 },
     "cost-A-16ch-remote": { "price": 70 }
+  },
+  "businessRules": {
+    "validation": {
+      "rollerBlind": {
+        "minWidth": 250,
+        "maxWidth": 3300,
+        "minHeight": 300,
+        "maxHeight": 3300
+      }
+    },
+    "logic": {
+      "hdWinderThresholdArea": 4000000
+    },
+    "mappings": {
+      "accessoryPriceKeyMap": {
+        "dual": "comboBracket",
+        "winder": "winderHD",
+        "motor": "motorStandard",
+        "remote": "remoteStandard",
+        "charger": "chargerStandard",
+        "cord": "cord3m"
+      },
+      "accessoryMethodNameMap": {
+        "dual": "calculateDualPrice",
+        "winder": "calculateWinderPrice",
+        "motor": "calculateMotorPrice",
+        "remote": "calculateRemotePrice",
+        "charger": "calculateChargerPrice",
+        "cord": "calculateCordPrice"
+      }
+    }
   }
 }

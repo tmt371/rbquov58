@@ -94,7 +94,8 @@ export class QuoteService {
             targetItem.linePrice = null;
 
             if ((column === 'width' || column === 'height') && targetItem.width && targetItem.height) {
-                if ((targetItem.width * targetItem.height) > 4000000 && !targetItem.motor) {
+                const logicThresholds = this.configManager.getLogicThresholds();
+                if (logicThresholds && (targetItem.width * targetItem.height) > logicThresholds.hdWinderThresholdArea && !targetItem.motor) {
                     targetItem.winder = 'HD';
                 }
             }

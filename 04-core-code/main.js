@@ -87,7 +87,7 @@ class App {
         this.eventAggregator = new EventAggregator();
         this.configManager = new ConfigManager(this.eventAggregator);
         
-        const productFactory = new ProductFactory();
+        const productFactory = new ProductFactory({ configManager: this.configManager });
 
         // Services are instantiated here...
         const quoteService = new QuoteService({

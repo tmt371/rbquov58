@@ -80,22 +80,15 @@ export class CalculationService {
         const productStrategy = this.productFactory.getProductStrategy(productType);
         if (!productStrategy) return 0;
 
+        const { accessoryPriceKeyMap, accessoryMethodNameMap } = this.configManager.getAccessoryMappings();
         let priceKey;
 
         // Check if a specific cost key is passed for cost calculation
         if (data && data.costKey) {
             priceKey = data.costKey;
         } else {
-            // Otherwise, use the standard sale price mapping
-            const priceKeyMap = {
-                'dual': 'comboBracket',
-                'winder': 'winderHD',
-                'motor': 'motorStandard',
-                'remote': 'remoteStandard', // This remains the default SALE price
-                'charger': 'chargerStandard',
-                'cord': 'cord3m'
-            };
-            priceKey = priceKeyMap[accessoryName];
+            // Otherwise, use the standard sale price mapping from the config
+            priceKey = accessoryPriceKeyMap[accessoryName];
         }
         
         if (!priceKey) {
@@ -106,17 +99,9 @@ export class CalculationService {
         const pricePerUnit = this.configManager.getAccessoryPrice(priceKey);
         if (pricePerUnit === null) return 0;
 
-        const methodNameMap = {
-            'dual': 'calculateDualPrice',
-            'winder': 'calculateWinderPrice',
-            'motor': 'calculateMotorPrice',
-            'remote': 'calculateRemotePrice',
-            'charger': 'calculateChargerPrice',
-            'cord': 'calculateCordPrice'
-        };
-        const methodName = methodNameMap[accessoryName];
+        const methodName = accessoryMethodNameMap[accessoryName];
         
-        if (productStrategy[methodName]) {
+        if (methodName && productStrategy[methodName]) {
             const args = (data.items) ? [data.items, pricePerUnit] : [data.count, pricePerUnit];
             return productStrategy[methodName](...args);
         }

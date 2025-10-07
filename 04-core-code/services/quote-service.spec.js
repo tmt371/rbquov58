@@ -19,7 +19,10 @@ const mockProductFactory = {
 };
 
 const mockConfigManager = {
-    getFabricTypeSequence: () => ['B1', 'B2', 'B3', 'B4', 'B5', 'SN']
+    getFabricTypeSequence: () => ['B1', 'B2', 'B3', 'B4', 'B5', 'SN'],
+    getLogicThresholds: () => ({
+        hdWinderThresholdArea: 4000000
+    })
 };
 
 // [REFACTORED] Updated the mock initial state to match the new generic structure.

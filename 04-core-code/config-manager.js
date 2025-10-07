@@ -7,7 +7,8 @@ export class ConfigManager {
         this.priceMatrices = null;
         this.accessories = null;
         this.f2Config = f2Config || {}; // Load the F2 config
-        this.fabricTypeSequence = null; 
+        this.fabricTypeSequence = null;
+        this.businessRules = null;
         this.isInitialized = false;
     }
 
@@ -24,6 +25,7 @@ export class ConfigManager {
             this.priceMatrices = data.matrices;
             this.accessories = data.accessories;
             this.fabricTypeSequence = data.fabricTypeSequence || [];
+            this.businessRules = data.businessRules || {};
             this.isInitialized = true;
             console.log("ConfigManager initialized and price matrices loaded successfully.");
 
@@ -97,5 +99,20 @@ export class ConfigManager {
      */
     getF2Config() {
         return this.f2Config;
+    }
+
+    getValidationRules(productType) {
+        if (!this.isInitialized || !this.businessRules) return null;
+        return this.businessRules.validation?.[productType] || null;
+    }
+
+    getLogicThresholds() {
+        if (!this.isInitialized || !this.businessRules) return null;
+        return this.businessRules.logic || null;
+    }
+
+    getAccessoryMappings() {
+        if (!this.isInitialized || !this.businessRules) return { accessoryPriceKeyMap: {}, accessoryMethodNameMap: {} };
+        return this.businessRules.mappings || { accessoryPriceKeyMap: {}, accessoryMethodNameMap: {} };
     }
 }

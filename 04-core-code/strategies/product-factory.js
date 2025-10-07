@@ -19,8 +19,9 @@ const strategyMap = {
 };
 
 export class ProductFactory {
-    constructor() {
-        console.log("ProductFactory Initialized.");
+    constructor({ configManager }) {
+        this.configManager = configManager;
+        console.log("ProductFactory Initialized with ConfigManager.");
     }
 
     /**
@@ -32,8 +33,8 @@ export class ProductFactory {
         const StrategyClass = strategyMap[productType];
 
         if (StrategyClass) {
-            // 回傳一個新的策略實例
-            return new StrategyClass();
+            // 回傳一個新的策略實例，並傳入依賴
+            return new StrategyClass({ configManager: this.configManager });
         } else {
             console.error(`No strategy found for product type: ${productType}`);
             return null;
