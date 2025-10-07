@@ -22,6 +22,8 @@ export class QuickQuoteView {
         if (!isEnteringMode) {
             this.focusService.focusFirstEmptyCell('width');
         }
+        // This publish call might be redundant now, but we'll keep it for now
+        // to ensure multi-select mode toggling is visually immediate.
         this.publish();
     }
 
@@ -117,7 +119,7 @@ export class QuickQuoteView {
             this.uiService.setSumOutdated(true);
         }
         this.focusService.focusAfterCommit();
-        this.publish();
+        // The final publish call is now handled automatically by the state update cycle
     }
 
     handleSaveToFile() {
@@ -134,16 +136,10 @@ export class QuickQuoteView {
         this.eventAggregator.publish('showNotification', { message: result.message, type: notificationType });
     }
     
-    // [CORRECTED] Rewrote the reset logic to use the new uiService.reset() method.
-    // The initialUIState parameter is kept for signature compatibility but is no longer used.
-    handleReset(initialUIState) {
+    handleReset() {
         if (window.confirm("This will clear all data. Are you sure?")) {
-            // Note: quoteService.reset() still needs full implementation as per its warning log.
             this.quoteService.reset();
-            // This now correctly calls the new method in UIService to reset the UI state.
-            this.uiService.reset(); 
-            // 'publish()' and 'showNotification' are no longer needed here,
-            // as the state update from reset() will trigger the render cycle automatically.
+            this.uiService.reset();
             this.eventAggregator.publish('showNotification', { message: 'Quote has been reset.' });
         }
     }
@@ -290,16 +286,18 @@ export class QuickQuoteView {
         const productStrategy = this.productFactory.getProductStrategy(this.currentProduct);
         const { updatedQuoteData, firstError } = this.calculationService.calculateAndSum(currentQuoteData, productStrategy);
 
-        this.quoteService.quoteData = updatedQuoteData;
+        // [CORRECTED] Use the service method to update state instead of direct assignment.
+        // This ensures the change is committed to the single source of truth.
+        this.quoteService.setQuoteData(updatedQuoteData);
+
         if (firstError) {
             this.uiService.setSumOutdated(true);
-            this.publish();
             this.eventAggregator.publish('showNotification', { message: firstError.message, type: 'error' });
             this.uiService.setActiveCell(firstError.rowIndex, firstError.column);
         } else {
             this.uiService.setSumOutdated(false);
         }
-        this.publish();
+        // Redundant 'publish()' call removed. State update will trigger re-render.
     }
 
     handleSaveThenLoad() {

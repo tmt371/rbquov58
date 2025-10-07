@@ -38,6 +38,13 @@ export class QuoteService {
         const { quoteData } = this.stateService.getState();
         return quoteData;
     }
+    
+    // [NEW] Added a method to set the entire quoteData object.
+    // This is used after a full recalculation.
+    setQuoteData(newQuoteData) {
+        const currentState = this.stateService.getState();
+        this.stateService.updateState({ ...currentState, quoteData: newQuoteData });
+    }
 
     getItems() {
         const productData = this.getCurrentProductData();
@@ -127,7 +134,6 @@ export class QuoteService {
         
         const newItem = { ...targetItem, [column]: value };
 
-        // [CORRECTED] The extra '}' that caused the syntax error was here. It has been removed.
         if ((column === 'width' || column === 'height') && newItem.width && newItem.height) {
             const logicThresholds = this.configManager.getLogicThresholds();
             if (logicThresholds && (newItem.width * newItem.height) > logicThresholds.hdWinderThresholdArea && !newItem.motor) {
@@ -403,8 +409,6 @@ export class QuoteService {
         // This needs access to the absolute initial state, which StateService should provide.
         // For now, this is a simplified implementation. Awaiting StateService enhancement.
         console.warn("QuoteService.reset() is not fully implemented pending StateService enhancements.");
-        // const initialState = this.stateService.getInitialState();
-        // this.stateService.updateState(initialState);
     }
 
     hasData() {
