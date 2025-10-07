@@ -4,6 +4,8 @@
  * @fileoverview A dedicated service for managing all UI-related state.
  * It is now a stateless logic processor that dispatches updates to the StateService.
  */
+import { initialState } from '../config/initial-state.js';
+
 export class UIService {
     constructor({ stateService }) {
         this.stateService = stateService;
@@ -82,6 +84,11 @@ export class UIService {
         return ui;
     }
 
+    // [NEW] Added a reset method to restore the UI state to its initial value.
+    reset() {
+        this._updateUiState(ui => JSON.parse(JSON.stringify(initialState.ui)));
+    }
+
     setWelcomeDialogShown(wasShown) {
         this._updateUiState(ui => ({ ...ui, welcomeDialogShown: wasShown }));
     }
@@ -141,7 +148,8 @@ export class UIService {
     }
 
     setSumOutdated(isOutdated) {
-        this._updateUiState(ui => ({ ...ui, isSumOutdated }));
+        // [CORRECTED] Changed the value from the undefined 'isSumOutdated' to the passed argument 'isOutdated'.
+        this._updateUiState(ui => ({ ...ui, isSumOutdated: isOutdated }));
     }
 
     setCurrentView(viewName) {

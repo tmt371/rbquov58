@@ -134,11 +134,16 @@ export class QuickQuoteView {
         this.eventAggregator.publish('showNotification', { message: result.message, type: notificationType });
     }
     
+    // [CORRECTED] Rewrote the reset logic to use the new uiService.reset() method.
+    // The initialUIState parameter is kept for signature compatibility but is no longer used.
     handleReset(initialUIState) {
         if (window.confirm("This will clear all data. Are you sure?")) {
+            // Note: quoteService.reset() still needs full implementation as per its warning log.
             this.quoteService.reset();
-            this.uiService.reset(initialUIState); 
-            this.publish();
+            // This now correctly calls the new method in UIService to reset the UI state.
+            this.uiService.reset(); 
+            // 'publish()' and 'showNotification' are no longer needed here,
+            // as the state update from reset() will trigger the render cycle automatically.
             this.eventAggregator.publish('showNotification', { message: 'Quote has been reset.' });
         }
     }
@@ -161,9 +166,6 @@ export class QuickQuoteView {
         this.publish();
     }
     
-    /**
-     * [REVISED] Now handles the returned array of changed indexes to clear LF status.
-     */
     handleTableCellClick({ rowIndex, column }) {
         const item = this.quoteService.getItems()[rowIndex];
         if (!item) return;
@@ -182,9 +184,6 @@ export class QuickQuoteView {
         this.publish();
     }
     
-    /**
-     * [REVISED] Now handles the returned array of changed indexes to clear LF status.
-     */
     handleCycleType() {
         const items = this.quoteService.getItems();
         const eligibleItems = items.filter(item => item.width && item.height);
@@ -231,9 +230,6 @@ export class QuickQuoteView {
         });
     }
 
-    /**
-     * [REVISED] Now handles the returned array of changed indexes to clear LF status.
-     */
     handleTypeCellLongPress({ rowIndex }) {
         const item = this.quoteService.getItems()[rowIndex];
         if (!item || (!item.width && !item.height)) {
@@ -251,9 +247,6 @@ export class QuickQuoteView {
         }, `Set fabric type for Row #${rowIndex + 1}:`);
     }
 
-    /**
-     * [REVISED] Now handles the returned array of changed indexes to clear LF status.
-     */
     handleTypeButtonLongPress() {
         this._showFabricTypeDialog((newType) => {
             const changedIndexes = this.quoteService.batchUpdateFabricType(newType);
@@ -266,9 +259,6 @@ export class QuickQuoteView {
         }, 'Set fabric type for ALL rows:');
     }
 
-    /**
-     * [REVISED] Now handles the returned array of changed indexes to clear LF status.
-     */
     handleMultiTypeSet() {
         const { isMultiSelectMode, multiSelectSelectedIndexes } = this.uiService.getState();
 
