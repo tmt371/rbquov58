@@ -6,7 +6,8 @@
  */
 
 export class RollerBlindStrategy {
-    constructor() {
+    constructor({ configManager }) {
+        this.configManager = configManager;
         console.log("RollerBlindStrategy Initialized.");
     }
 
@@ -48,9 +49,18 @@ export class RollerBlindStrategy {
      * @returns {object}
      */
     getValidationRules() {
+        const rules = this.configManager.getValidationRules('rollerBlind');
+        if (!rules) {
+            // Provide a safe fallback if rules are not found, preventing crashes.
+            return {
+                width: { name: 'Width' },
+                height: { name: 'Height' }
+            };
+        }
+        // Adapt the data from the config to the nested structure expected by the consumers.
         return {
-            width: { min: 250, max: 3300, name: 'Width' },
-            height: { min: 300, max: 3300, name: 'Height' }
+            width: { min: rules.minWidth, max: rules.maxWidth, name: 'Width' },
+            height: { min: rules.minHeight, max: rules.maxHeight, name: 'Height' }
         };
     }
 

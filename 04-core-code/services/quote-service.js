@@ -125,11 +125,11 @@ export class QuoteService {
         const targetItem = items[rowIndex];
         if (!targetItem || targetItem[column] === value) return false;
 
-        const newItem = { ...targetItem, [column]: value, linePrice: null };
-
-        if ((column === 'width' || column === 'height') && newItem.width && newItem.height) {
-            if ((newItem.width * newItem.height) > 4000000 && !newItem.motor) {
-                newItem.winder = 'HD';
+            if ((column === 'width' || column === 'height') && targetItem.width && targetItem.height) {
+                const logicThresholds = this.configManager.getLogicThresholds();
+                if (logicThresholds && (targetItem.width * targetItem.height) > logicThresholds.hdWinderThresholdArea && !targetItem.motor) {
+                    targetItem.winder = 'HD';
+                }
             }
         }
 
