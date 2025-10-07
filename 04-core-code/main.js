@@ -87,6 +87,12 @@ class App {
         
         this.eventAggregator = new EventAggregator();
         this.configManager = new ConfigManager(this.eventAggregator);
+
+        // --- [CORRECTED] Instantiate StateService BEFORE it is used ---
+        const stateService = new StateService({
+            initialState: startingState,
+            eventAggregator: this.eventAggregator
+        });
         
         const productFactory = new ProductFactory({ configManager: this.configManager });
 
@@ -106,8 +112,6 @@ class App {
         const uiService = new UIService({ stateService });
         const focusService = new FocusService({
             stateService,
-            // uiService is kept for now as it might have non-state-related methods.
-            // This will be reviewed when refactoring FocusService.
             uiService
         });
 
