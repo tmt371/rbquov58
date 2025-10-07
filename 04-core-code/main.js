@@ -88,7 +88,6 @@ class App {
         this.eventAggregator = new EventAggregator();
         this.configManager = new ConfigManager(this.eventAggregator);
 
-        // --- [CORRECTED] Instantiate StateService BEFORE it is used ---
         const stateService = new StateService({
             initialState: startingState,
             eventAggregator: this.eventAggregator
@@ -96,7 +95,6 @@ class App {
         
         const productFactory = new ProductFactory({ configManager: this.configManager });
 
-        // Services are instantiated here...
         const quoteService = new QuoteService({
             stateService,
             productFactory,
@@ -110,9 +108,12 @@ class App {
         });
         const fileService = new FileService();
         const uiService = new UIService({ stateService });
+
+        // --- [CORRECTED] Injected the missing 'quoteService' dependency into FocusService ---
         const focusService = new FocusService({
             stateService,
-            uiService
+            uiService,
+            quoteService
         });
 
         const publishStateChangeCallback = () => this.eventAggregator.publish('stateChanged', this.appController._getFullState());
