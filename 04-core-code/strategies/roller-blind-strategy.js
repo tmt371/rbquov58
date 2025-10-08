@@ -4,7 +4,6 @@
  * @fileoverview Contains all business logic specific to the Roller Blind product.
  * This includes price calculation, validation rules, etc.
  */
-import { v4 as uuidv4 } from 'uuid';
 
 // [CORRECTED] Changed the import from a bare module specifier to a browser-compatible CDN URL.
 import { v4 as uuidv4 } from 'https://cdn.jsdelivr.net/npm/uuid@9.0.1/dist/esm-browser/index.js';
