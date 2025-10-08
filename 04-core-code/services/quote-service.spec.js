@@ -11,7 +11,7 @@ const getMockInitialItem = () => ({
 });
 
 const mockProductStrategy = {
-    getInitialItemData: () => ({ ...getMockInitialItem(), itemId: `item-${Date.now()}` })
+    getInitialItemData: () => ({ ...getMockInitialItem(), itemId: `mock-uuid-${Math.random()}` })
 };
 
 const mockProductFactory = {
