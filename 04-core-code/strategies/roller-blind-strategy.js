@@ -5,6 +5,9 @@
  * This includes price calculation, validation rules, etc.
  */
 
+// [CORRECTED] Changed the import from a bare module specifier to a browser-compatible CDN URL.
+import { v4 as uuidv4 } from 'https://cdn.jsdelivr.net/npm/uuid@9.0.1/dist/esm-browser/index.js';
+
 export class RollerBlindStrategy {
     constructor({ configManager }) {
         this.configManager = configManager;
@@ -70,7 +73,7 @@ export class RollerBlindStrategy {
      */
     getInitialItemData() {
         return {
-            itemId: `item-${Date.now()}`,
+            itemId: uuidv4(),
             // --- Phase 1 Fields ---
             width: null,
             height: null,
@@ -98,22 +101,10 @@ export class RollerBlindStrategy {
         return totalPrice;
     }
 
-    /**
-     * [REFACTORED] Accepts a pre-calculated count instead of the full items array.
-     * @param {number} count - The number of winders.
-     * @param {number} pricePerUnit - The price for a single winder.
-     * @returns {number} The total price.
-     */
     calculateWinderPrice(count, pricePerUnit) {
         return count * pricePerUnit;
     }
 
-    /**
-     * [REFACTORED] Accepts a pre-calculated count instead of the full items array.
-     * @param {number} count - The number of motors.
-     * @param {number} pricePerUnit - The price for a single motor.
-     * @returns {number} The total price.
-     */
     calculateMotorPrice(count, pricePerUnit) {
         return count * pricePerUnit;
     }
