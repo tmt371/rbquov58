@@ -4,6 +4,7 @@
  * @fileoverview Contains all business logic specific to the Roller Blind product.
  * This includes price calculation, validation rules, etc.
  */
+import { v4 as uuidv4 } from 'uuid';
 
 export class RollerBlindStrategy {
     constructor({ configManager }) {
@@ -70,7 +71,7 @@ export class RollerBlindStrategy {
      */
     getInitialItemData() {
         return {
-            itemId: `item-${Date.now()}`,
+            itemId: uuidv4(),
             // --- Phase 1 Fields ---
             width: null,
             height: null,
