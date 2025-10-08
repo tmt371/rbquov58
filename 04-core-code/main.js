@@ -106,10 +106,12 @@ class App {
             productFactory,
             configManager: this.configManager
         });
-        const fileService = new FileService();
-        const uiService = new UIService({ stateService });
+        
+        // --- [CORRECTED] Injected 'productFactory' into FileService ---
+        const fileService = new FileService({ productFactory });
 
-        // --- [CORRECTED] Injected the missing 'quoteService' dependency into FocusService ---
+        const uiService = new UIService({ stateService });
+        
         const focusService = new FocusService({
             stateService,
             uiService,

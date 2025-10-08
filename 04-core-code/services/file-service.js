@@ -1,13 +1,16 @@
 // /04-core-code/services/file-service.js
 
 import { dataToCsv, csvToData } from '../utils/csv-parser.js';
+import { initialState } from '../config/initial-state.js';
 
 /**
  * @fileoverview Service for handling all file-related operations
  * like saving, loading, and exporting.
  */
 export class FileService {
-    constructor() {
+    // [MODIFIED] Constructor now accepts productFactory for dependency injection.
+    constructor({ productFactory }) {
+        this.productFactory = productFactory;
         console.log("FileService Initialized.");
     }
 
@@ -41,10 +44,6 @@ export class FileService {
         return `quote-${yyyy}${mm}${dd}${hh}${min}.${extension}`;
     }
 
-    /**
-     * Saves the quote data as a JSON file.
-     * @param {object} quoteData The data to save.
-     */
     saveToJson(quoteData) {
         try {
             const jsonString = JSON.stringify(quoteData, null, 2);
@@ -57,10 +56,6 @@ export class FileService {
         }
     }
 
-    /**
-     * Exports the quote data as a CSV file.
-     * @param {object} quoteData The data to export.
-     */
     exportToCsv(quoteData) {
         try {
             const csvString = dataToCsv(quoteData);
@@ -74,7 +69,8 @@ export class FileService {
     }
 
     /**
-     * Parses loaded file content into a quoteData object.
+     * [REFACTORED] Parses loaded file content into a quoteData object.
+     * The business logic for handling parsed CSV data has been moved here.
      * @param {string} fileName The name of the loaded file.
      * @param {string} content The content of the file.
      * @returns {{success: boolean, data?: object, message?: string}}
@@ -82,22 +78,36 @@ export class FileService {
     parseFileContent(fileName, content) {
         try {
             let loadedData = null;
+
             if (fileName.toLowerCase().endsWith('.json')) {
                 loadedData = JSON.parse(content);
             } else if (fileName.toLowerCase().endsWith('.csv')) {
-                loadedData = csvToData(content);
+                // Step 1: Get the pure array of items from the parser.
+                const items = csvToData(content);
+                if (items === null) {
+                    throw new Error("CSV parser returned null.");
+                }
+
+                // Step 2: [NEW] Business logic is now handled here. Add the final empty row.
+                const productStrategy = this.productFactory.getProductStrategy('rollerBlind');
+                const newItem = productStrategy.getInitialItemData();
+                items.push(newItem);
+
+                // Step 3: [NEW] Construct the full quoteData object.
+                const newQuoteData = JSON.parse(JSON.stringify(initialState.quoteData));
+                newQuoteData.products.rollerBlind.items = items;
+                loadedData = newQuoteData;
+                
             } else {
                 return { success: false, message: `Unsupported file type: ${fileName}` };
             }
 
-            // [REFACTORED] Updated validation to check for the new generic state structure.
             const currentProduct = loadedData?.currentProduct;
             const productData = loadedData?.products?.[currentProduct];
 
             if (productData && Array.isArray(productData.items)) {
                 return { success: true, data: loadedData, message: `Successfully loaded data from ${fileName}` };
             } else {
-                // Also check for the old structure for backward compatibility during transition.
                 if (loadedData && loadedData.rollerBlindItems && Array.isArray(loadedData.rollerBlindItems)) {
                      return { success: true, data: loadedData, message: `Successfully loaded legacy data from ${fileName}` };
                 }
