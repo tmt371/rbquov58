@@ -10,15 +10,11 @@ export class K2FabricView {
         this.eventAggregator = eventAggregator;
         this.publish = publishStateChangeCallback;
         
-        // [NEW] A temporary set to hold row indexes that should be skipped during batch updates.
         this.indexesToExcludeFromBatchUpdate = new Set();
 
         console.log("K2FabricView Initialized.");
     }
 
-    /**
-     * [REVISED] Handles the request to enter Fabric & Color mode, now with a 3-option dialog for conflicts.
-     */
     handleFocusModeRequest() {
         const currentMode = this.uiService.getState().activeEditMode;
         const newMode = currentMode === 'K2' ? null : 'K2';
@@ -27,12 +23,13 @@ export class K2FabricView {
             const items = this.quoteService.getItems();
             const { lfModifiedRowIndexes } = this.uiService.getState();
             const eligibleTypes = ['B2', 'B3', 'B4'];
+            
+            // [CORRECTED] Changed .has() to .includes() to correctly check an array.
             const hasConflict = items.some((item, index) => 
-                eligibleTypes.includes(item.fabricType) && lfModifiedRowIndexes.has(index)
+                eligibleTypes.includes(item.fabricType) && lfModifiedRowIndexes.includes(index)
             );
 
             if (hasConflict) {
-                // [NEW] Show a 3-option dialog: Continue (overwrite), Maintain (skip), or Cancel.
                 this.eventAggregator.publish('showConfirmationDialog', {
                     message: 'Data Conflict: Some items (B2, B3, B4) already have Light-Filter settings. Continuing with a batch edit will overwrite this data. How would you like to proceed?',
                     closeOnOverlayClick: false,
@@ -42,14 +39,14 @@ export class K2FabricView {
                                 type: 'button', text: 'Overwrite (L-Filter)', 
                                 callback: () => {
                                     this.indexesToExcludeFromBatchUpdate.clear();
-                                    this._enterFCMode(true); // Enters mode and clears LF pink background
+                                    this._enterFCMode(true);
                                 } 
                             },
                             { 
                                 type: 'button', text: 'Keep Existing (Skip L-Filter)', 
                                 callback: () => {
                                     this.indexesToExcludeFromBatchUpdate = new Set(this.uiService.getState().lfModifiedRowIndexes);
-                                    this._enterFCMode(false); // Enters mode but keeps LF pink background
+                                    this._enterFCMode(false);
                                 }
                             },
                             { type: 'button', text: 'Cancel', className: 'secondary', callback: () => {} }
@@ -71,12 +68,12 @@ export class K2FabricView {
             const indexesToClear = new Set();
             const eligibleTypes = ['B2', 'B3', 'B4'];
             items.forEach((item, index) => {
-                if (eligibleTypes.includes(item.fabricType) && lfModifiedRowIndexes.has(index)) {
+                if (eligibleTypes.includes(item.fabricType) && lfModifiedRowIndexes.includes(index)) {
                     indexesToClear.add(index);
                 }
             });
             if (indexesToClear.size > 0) {
-                this.uiService.removeLFModifiedRows(indexesToClear);
+                this.uiService.removeLFModifiedRows(Array.from(indexesToClear));
             }
         }
         this.uiService.setActiveEditMode('K2');
@@ -85,9 +82,6 @@ export class K2FabricView {
         this.publish();
     }
 
-    /**
-     * [REVISED] Now passes the exclusion set to the quote service during batch updates.
-     */
     handlePanelInputBlur({ type, field, value }) {
         const { lfSelectedRowIndexes } = this.uiService.getState();
         
@@ -100,7 +94,6 @@ export class K2FabricView {
                 this.uiService.addLFModifiedRows(lfSelectedRowIndexes);
             }
         } else {
-            // [NEW] Pass the set of indexes to exclude from this update.
             this.quoteService.batchUpdatePropertyByType(type, field, value, this.indexesToExcludeFromBatchUpdate);
         }
         
@@ -140,7 +133,7 @@ export class K2FabricView {
             
             if (activeEditMode === 'K2_LF_DELETE_SELECT') {
                 const { lfModifiedRowIndexes } = this.uiService.getState();
-                if (!lfModifiedRowIndexes.has(rowIndex)) {
+                if (!lfModifiedRowIndexes.includes(rowIndex)) {
                     this.eventAggregator.publish('showNotification', { message: 'Only items with a Light-Filter setting (pink background) can be selected for deletion.', type: 'error' });
                     return;
                 }
@@ -190,15 +183,11 @@ export class K2FabricView {
         }
     }
 
-    /**
-     * [REVISED] Now clears the temporary exclusion set when exiting any K2 mode.
-     */
     _exitAllK2Modes() {
         this.uiService.setActiveEditMode(null);
         this.uiService.clearRowSelection();
         this.uiService.clearLFSelection();
         
-        // [NEW] Clear the exclusion set to ensure it's fresh for the next operation.
         this.indexesToExcludeFromBatchUpdate.clear();
 
         this._updatePanelInputsState();
@@ -245,7 +234,7 @@ export class K2FabricView {
         } else if (activeEditMode === 'K2_LF_SELECT') {
             allPanelInputs.forEach(input => {
                 const isLFRow = input.dataset.type === 'LF';
-                const hasSelection = lfSelectedRowIndexes.size > 0;
+                const hasSelection = lfSelectedRowIndexes.length > 0;
                 input.disabled = !(isLFRow && hasSelection);
             });
         } else {
@@ -256,31 +245,9 @@ export class K2FabricView {
         }
     }
     
-    /**
-     * [REVISED] This method now includes a check for incomplete fabric details.
-     */
     activate() {
-        // Check for items that have a type but are missing fabric details.
-        const items = this.quoteService.getItems();
-        const needsAttention = items.some(item => item.fabricType && (!item.fabric || !item.color));
-
-        if (needsAttention) {
-            this.eventAggregator.publish('showConfirmationDialog', {
-                message: 'Notice: Because the fabric TYPE was changed, the Fabric Name (F-NAME) and/or Color (F-COLOR) for some items have been cleared. Please review and fill in the missing details.',
-                layout: [
-                    [
-                        { 
-                            type: 'button', 
-                            text: '確定', 
-                            colspan: 3,
-                            className: 'primary-confirm-button',
-                            callback: () => true 
-                        }
-                    ]
-                ]
-            });
-        }
-
+        // [REMOVED] The data integrity check and alert have been removed as per the user's request.
+        
         this.uiService.setVisibleColumns(['sequence', 'fabricTypeDisplay', 'fabric', 'color']);
     }
 }
