@@ -3,8 +3,9 @@
 /* --- Toast Notification Styles --- */
 #toast-container {
     position: fixed;
-    top: 20px;
+    top: 50%; /* [MODIFIED] Changed from 20px to center vertically. */
     right: 20px;
+    transform: translateY(-50%); /* [ADDED] Added to perfectly center the container. */
     z-index: 9999;
     display: flex;
     flex-direction: column;
