@@ -24,7 +24,6 @@ export class K2FabricView {
             const { lfModifiedRowIndexes } = this.uiService.getState();
             const eligibleTypes = ['B2', 'B3', 'B4'];
             
-            // [CORRECTED] Changed .has() to .includes() to correctly check an array.
             const hasConflict = items.some((item, index) => 
                 eligibleTypes.includes(item.fabricType) && lfModifiedRowIndexes.includes(index)
             );
@@ -65,15 +64,15 @@ export class K2FabricView {
         if (isOverwriting) {
             const items = this.quoteService.getItems();
             const { lfModifiedRowIndexes } = this.uiService.getState();
-            const indexesToClear = new Set();
+            const indexesToClear = [];
             const eligibleTypes = ['B2', 'B3', 'B4'];
             items.forEach((item, index) => {
                 if (eligibleTypes.includes(item.fabricType) && lfModifiedRowIndexes.includes(index)) {
-                    indexesToClear.add(index);
+                    indexesToClear.push(index);
                 }
             });
-            if (indexesToClear.size > 0) {
-                this.uiService.removeLFModifiedRows(Array.from(indexesToClear));
+            if (indexesToClear.length > 0) {
+                this.uiService.removeLFModifiedRows(indexesToClear);
             }
         }
         this.uiService.setActiveEditMode('K2');
@@ -83,16 +82,8 @@ export class K2FabricView {
     }
 
     handlePanelInputBlur({ type, field, value }) {
-        const { lfSelectedRowIndexes } = this.uiService.getState();
-        
         if (type === 'LF') {
-            const fNameInput = document.querySelector('input[data-type="LF"][data-field="fabric"]');
-            const fColorInput = document.querySelector('input[data-type="LF"][data-field="color"]');
-            
-            if (fNameInput && fColorInput && fNameInput.value && fColorInput.value) {
-                this.quoteService.batchUpdateLFProperties(lfSelectedRowIndexes, fNameInput.value, fColorInput.value);
-                this.uiService.addLFModifiedRows(lfSelectedRowIndexes);
-            }
+            this._applyLFChanges();
         } else {
             this.quoteService.batchUpdatePropertyByType(type, field, value, this.indexesToExcludeFromBatchUpdate);
         }
@@ -111,16 +102,8 @@ export class K2FabricView {
             nextInput.select();
         } else {
             if (activeElement.dataset.type === 'LF' || (activeElement.dataset.type !== 'LF' && this.uiService.getState().activeEditMode === 'K2')) {
-                 const { lfSelectedRowIndexes } = this.uiService.getState();
-                 const fNameInput = document.querySelector('input[data-type="LF"][data-field="fabric"]');
-                 const fColorInput = document.querySelector('input[data-type="LF"][data-field="color"]');
-
-                if (fNameInput && fColorInput && fNameInput.value && fColorInput.value && lfSelectedRowIndexes.size > 0) {
-                    this.quoteService.batchUpdateLFProperties(lfSelectedRowIndexes, fNameInput.value, fColorInput.value);
-                    this.uiService.addLFModifiedRows(lfSelectedRowIndexes);
-                }
+                this._applyLFChanges();
             }
-            
             this._exitAllK2Modes();
         }
     }
@@ -153,10 +136,14 @@ export class K2FabricView {
         }
     }
 
+    /**
+     * [CORRECTED] Handles the Light-Filter button click. Now applies changes on the second click.
+     */
     handleLFEditRequest() {
         const { activeEditMode } = this.uiService.getState();
         
         if (activeEditMode === 'K2_LF_SELECT') {
+            this._applyLFChanges(); // Apply changes before exiting.
             this._exitAllK2Modes();
         } else {
             this.uiService.setActiveEditMode('K2_LF_SELECT');
@@ -170,7 +157,7 @@ export class K2FabricView {
         
         if (activeEditMode === 'K2_LF_DELETE_SELECT') {
             const { lfSelectedRowIndexes } = this.uiService.getState();
-            if (lfSelectedRowIndexes.size > 0) {
+            if (lfSelectedRowIndexes.length > 0) {
                 this.quoteService.removeLFProperties(lfSelectedRowIndexes);
                 this.uiService.removeLFModifiedRows(lfSelectedRowIndexes);
                 this.eventAggregator.publish('showNotification', { message: 'Light-Filter settings have been cleared.' });
@@ -192,6 +179,22 @@ export class K2FabricView {
 
         this._updatePanelInputsState();
         this.publish();
+    }
+
+    /**
+     * [NEW] A helper method to read LF inputs and apply changes to the state.
+     */
+    _applyLFChanges() {
+        const { lfSelectedRowIndexes } = this.uiService.getState();
+        if (lfSelectedRowIndexes.length === 0) return;
+
+        const fNameInput = document.querySelector('input[data-type="LF"][data-field="fabric"]');
+        const fColorInput = document.querySelector('input[data-type="LF"][data-field="color"]');
+        
+        if (fNameInput && fColorInput && fNameInput.value && fColorInput.value) {
+            this.quoteService.batchUpdateLFProperties(lfSelectedRowIndexes, fNameInput.value, fColorInput.value);
+            this.uiService.addLFModifiedRows(lfSelectedRowIndexes);
+        }
     }
 
     _updatePanelInputsState() {
@@ -246,8 +249,6 @@ export class K2FabricView {
     }
     
     activate() {
-        // [REMOVED] The data integrity check and alert have been removed as per the user's request.
-        
         this.uiService.setVisibleColumns(['sequence', 'fabricTypeDisplay', 'fabric', 'color']);
     }
 }
