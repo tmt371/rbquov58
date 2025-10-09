@@ -17,82 +17,73 @@ export class QuickQuoteView {
         this.currentProduct = 'rollerBlind';
     }
 
-    // [REMOVED] The handleToggleMultiSelectMode method is no longer needed as multi-select is now the default.
-
-    /**
-     * [REFACTORED] Handles sequence cell clicks. Logic is simplified to always toggle multi-select.
-     */
-    handleSequenceCellClick({ rowIndex }) {
-        const items = this.quoteService.getItems();
-        const item = items[rowIndex];
-        const isLastRowEmpty = (rowIndex === items.length - 1) && (!item.width && !item.height);
-
-        if (isLastRowEmpty) {
-            this.eventAggregator.publish('showNotification', { message: "Cannot select the final empty row.", type: 'error' });
-            return;
+    handleToggleMultiSelectMode() {
+        const isEnteringMode = this.uiService.toggleMultiSelectMode();
+        if (!isEnteringMode) {
+            this.focusService.focusFirstEmptyCell('width');
         }
-        this.uiService.toggleMultiSelectSelection(rowIndex);
         this.publish();
     }
 
-    /**
-     * [REFACTORED] Added a guard clause to prevent deleting multiple items at once.
-     */
-    handleDeleteRow() {
-        const { multiSelectSelectedIndexes } = this.uiService.getState();
+    handleSequenceCellClick({ rowIndex }) {
+        if (this.uiService.getState().isMultiSelectMode) {
+            const items = this.quoteService.getItems();
+            const item = items[rowIndex];
+            const isLastRowEmpty = (rowIndex === items.length - 1) && (!item.width && !item.height);
 
-        if (multiSelectSelectedIndexes.length > 1) {
-            this.eventAggregator.publish('showConfirmationDialog', {
-                message: '一次只能刪除一支捲簾。',
-                layout: [[{ type: 'button', text: '確定', colspan: 3 }]]
-            });
-            return;
+            if (isLastRowEmpty) {
+                this.eventAggregator.publish('showNotification', { message: "Cannot select the final empty row.", type: 'error' });
+                return;
+            }
+            this.uiService.toggleMultiSelectSelection(rowIndex);
+        } else {
+            this.uiService.toggleRowSelection(rowIndex);
         }
+        this.publish();
+    }
 
-        const selectedIndex = multiSelectSelectedIndexes.length > 0 ? multiSelectSelectedIndexes[0] : null;
+    handleDeleteRow() {
+        const { isMultiSelectMode, multiSelectSelectedIndexes, selectedRowIndex } = this.uiService.getState();
+        if (isMultiSelectMode) {
+            if (multiSelectSelectedIndexes.length === 0) {
+                this.eventAggregator.publish('showNotification', { message: 'Please select rows to delete.' });
+                return;
+            }
+            this.quoteService.deleteMultipleRows(multiSelectSelectedIndexes);
+            this.uiService.toggleMultiSelectMode();
+            this.focusService.focusFirstEmptyCell('width');
+        } else {
+            if (selectedRowIndex === null) return;
 
-        if (selectedIndex === null) return;
-
-        this.quoteService.deleteRow(selectedIndex);
-        this.uiService.clearMultiSelectSelection(); // Clear selection after deletion
-        this.uiService.setSumOutdated(true);
-        this.focusService.focusAfterDelete();
-        
+            // The logic for deciding to clear or delete is now in the service
+            this.quoteService.deleteRow(selectedRowIndex);
+            
+            this.uiService.clearRowSelection();
+            this.uiService.setSumOutdated(true);
+            this.focusService.focusAfterDelete();
+        }
         this.publish();
         this.eventAggregator.publish('operationSuccessfulAutoHidePanel');
     }
 
-    /**
-     * [REFACTORED] Added a guard clause to ensure insertion is only performed on a single selection.
-     */
     handleInsertRow() {
-        const { multiSelectSelectedIndexes } = this.uiService.getState();
-
-        if (multiSelectSelectedIndexes.length !== 1) {
-            this.eventAggregator.publish('showConfirmationDialog', {
-                message: '插入新捲簾僅能於單一項次之下執行。',
-                layout: [[{ type: 'button', text: '確定', colspan: 3 }]]
-            });
-            return;
-        }
-        
-        const selectedIndex = multiSelectSelectedIndexes[0];
+        const { selectedRowIndex } = this.uiService.getState();
+        if (selectedRowIndex === null) return;
         const items = this.quoteService.getItems();
-        const isLastRow = selectedIndex === items.length - 1;
+        const isLastRow = selectedRowIndex === items.length - 1;
         if (isLastRow) {
              this.eventAggregator.publish('showNotification', { message: "Cannot insert after the last row.", type: 'error' });
              return;
         }
-        const nextItem = items[selectedIndex + 1];
+        const nextItem = items[selectedRowIndex + 1];
         const isNextRowEmpty = !nextItem.width && !nextItem.height && !nextItem.fabricType;
         if (isNextRowEmpty) {
             this.eventAggregator.publish('showNotification', { message: "Cannot insert before an empty row.", type: 'error' });
             return;
         }
-
-        const newRowIndex = this.quoteService.insertRow(selectedIndex);
-        this.uiService.clearMultiSelectSelection(); // Clear old selection
+        const newRowIndex = this.quoteService.insertRow(selectedRowIndex);
         this.uiService.setActiveCell(newRowIndex, 'width');
+        this.uiService.clearRowSelection();
         this.publish();
         this.eventAggregator.publish('operationSuccessfulAutoHidePanel');
     }
@@ -154,17 +145,16 @@ export class QuickQuoteView {
     }
     
     handleClearRow() {
-        const { multiSelectSelectedIndexes } = this.uiService.getState();
-        const selectedIndex = multiSelectSelectedIndexes.length === 1 ? multiSelectSelectedIndexes[0] : null;
-
-        if (selectedIndex === null) {
-            this.eventAggregator.publish('showNotification', { message: 'Please select a single row to clear.', type: 'error' });
+        const { selectedRowIndex } = this.uiService.getState();
+        if (selectedRowIndex === null) {
+            this.eventAggregator.publish('showNotification', { message: 'Please select a row to clear.', type: 'error' });
             return;
         }
-        this.focusService.focusAfterClear(selectedIndex); // Pass selectedIndex
-        this.quoteService.clearRow(selectedIndex);
-        this.uiService.clearMultiSelectSelection();
+        this.focusService.focusAfterClear();
+        this.quoteService.clearRow(selectedRowIndex);
+        this.uiService.clearRowSelection();
         this.uiService.setSumOutdated(true);
+        this.publish();
     }
     
     handleMoveActiveCell({ direction }) {
@@ -175,9 +165,7 @@ export class QuickQuoteView {
     handleTableCellClick({ rowIndex, column }) {
         const item = this.quoteService.getItems()[rowIndex];
         if (!item) return;
-
-        this.uiService.clearMultiSelectSelection();
-
+        this.uiService.clearRowSelection();
         if (column === 'width' || column === 'height') {
             this.uiService.setActiveCell(rowIndex, column);
             this.uiService.setInputValue(item[column]);
@@ -185,6 +173,7 @@ export class QuickQuoteView {
             this.uiService.setActiveCell(rowIndex, column);
             const changedIndexes = this.quoteService.cycleItemType(rowIndex);
             if (changedIndexes.length > 0) {
+                // [CORRECTED] Changed call from uiService to quoteService
                 this.quoteService.removeLFModifiedRows(changedIndexes);
                 this.uiService.setSumOutdated(true);
             }
@@ -206,6 +195,7 @@ export class QuickQuoteView {
         
         const changedIndexes = this.quoteService.batchUpdateFabricType(nextType);
         if (changedIndexes.length > 0) {
+            // [CORRECTED] Changed call from uiService to quoteService
             this.quoteService.removeLFModifiedRows(changedIndexes);
             this.uiService.setSumOutdated(true);
         }
@@ -246,6 +236,7 @@ export class QuickQuoteView {
         this._showFabricTypeDialog((newType) => {
             const changedIndexes = this.quoteService.setItemType(rowIndex, newType);
             if (changedIndexes.length > 0) {
+                // [CORRECTED] Changed call from uiService to quoteService
                 this.quoteService.removeLFModifiedRows(changedIndexes);
                 this.uiService.setSumOutdated(true);
             }
@@ -257,6 +248,7 @@ export class QuickQuoteView {
         this._showFabricTypeDialog((newType) => {
             const changedIndexes = this.quoteService.batchUpdateFabricType(newType);
             if (changedIndexes.length > 0) {
+                // [CORRECTED] Changed call from uiService to quoteService
                 this.quoteService.removeLFModifiedRows(changedIndexes);
                 this.uiService.setSumOutdated(true);
             }
@@ -265,7 +257,12 @@ export class QuickQuoteView {
     }
 
     handleMultiTypeSet() {
-        const { multiSelectSelectedIndexes } = this.uiService.getState();
+        const { isMultiSelectMode, multiSelectSelectedIndexes } = this.uiService.getState();
+
+        if (!isMultiSelectMode) {
+            this.eventAggregator.publish('showNotification', { message: 'Please click M-Sel to enter multi-select mode first.', type: 'error' });
+            return;
+        }
 
         if (multiSelectSelectedIndexes.length === 0) {
             this.eventAggregator.publish('showNotification', { message: 'Please select one or more rows to set the fabric type.', type: 'error' });
@@ -276,8 +273,9 @@ export class QuickQuoteView {
         this._showFabricTypeDialog((newType) => {
             const changedIndexes = this.quoteService.batchUpdateFabricTypeForSelection(multiSelectSelectedIndexes, newType);
             if (changedIndexes.length > 0) {
+                // [CORRECTED] Changed call from uiService to quoteService
                 this.quoteService.removeLFModifiedRows(changedIndexes);
-                this.uiService.clearMultiSelectSelection(); // Clear selection after applying
+                this.uiService.toggleMultiSelectMode();
                 this.uiService.setSumOutdated(true);
             }
             return changedIndexes.length > 0;
