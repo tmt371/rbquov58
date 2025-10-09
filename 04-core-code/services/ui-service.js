@@ -152,12 +152,6 @@ export class UIService {
     clearLFSelection() {
         this._updateUiState(ui => ({ ...ui, lfSelectedRowIndexes: [] }));
     }
-
-    // [REMOVED] The following three methods have been moved to QuoteService
-    // as lfModifiedRowIndexes is now part of the persistent quoteData state.
-    // - addLFModifiedRows
-    // - removeLFModifiedRows
-    // - hasLFModifiedRows
     
     setDualChainMode(mode) {
         this._updateUiState(ui => ({ ...ui, dualChainMode: mode }));
@@ -214,6 +208,8 @@ export class UIService {
     setSummaryMotorPrice(value) { this._updateUiState(ui => ({ ...ui, summaryMotorPrice: value })); }
     setSummaryRemotePrice(value) { this._updateUiState(ui => ({ ...ui, summaryRemotePrice: value })); }
     setSummaryChargerPrice(value) { this._updateUiState(ui => ({ ...ui, summaryChargerPrice: value })); }
+    // [ADDED] The missing method that caused the TypeError.
+    setSummaryCordPrice(value) { this._updateUiState(ui => ({ ...ui, summaryCordPrice: value })); }
     setSummaryAccessoriesTotal(value) { this._updateUiState(ui => ({ ...ui, summaryAccessoriesTotal: value })); }
 
     setF1RemoteDistribution(qty1, qty16) {
