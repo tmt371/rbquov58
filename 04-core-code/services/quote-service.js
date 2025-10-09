@@ -81,17 +81,25 @@ export class QuoteService {
         const productData = quoteData.products[productKey];
         let items = [...productData.items];
 
-        const isLastRow = selectedIndex === items.length - 1;
-        const item = items[selectedIndex];
-        const isRowEmpty = !item.width && !item.height && !item.fabricType;
+        const itemToDelete = items[selectedIndex];
+        
+        // This logic was moved from the view. The view decides, the service executes.
+        const isLastPopulatedRow = selectedIndex === items.length - 2 && items.length > 1 && !items[items.length - 1].width && !items[items.length-1].height;
 
-        if ((isLastRow && !isRowEmpty) || items.length === 1) {
-            const productStrategy = this.productFactory.getProductStrategy(productKey);
-            const newItem = productStrategy.getInitialItemData();
-            newItem.itemId = items[selectedIndex].itemId;
-            items[selectedIndex] = newItem;
+        if (isLastPopulatedRow || items.length === 1) {
+             const productStrategy = this.productFactory.getProductStrategy(productKey);
+             const newItem = productStrategy.getInitialItemData();
+             newItem.itemId = itemToDelete.itemId; // Preserve itemId for stability
+             items[selectedIndex] = newItem;
         } else {
-            items.splice(selectedIndex, 1);
+             items.splice(selectedIndex, 1);
+        }
+
+        // [CORRECTED] Add the safeguard to prevent an empty items array.
+        // This logic is mirrored from the deleteMultipleRows method.
+        if (items.length === 0) {
+            const productStrategy = this.productFactory.getProductStrategy(productKey);
+            items.push(productStrategy.getInitialItemData());
         }
 
         items = this._consolidateEmptyRows(items, productKey);
@@ -404,10 +412,8 @@ export class QuoteService {
         });
     }
 
-    // [CORRECTED] Fully implemented the reset method.
     reset() {
         const currentState = this.stateService.getState();
-        // Create a deep copy to prevent mutating the original initialState constant
         const newQuoteData = JSON.parse(JSON.stringify(initialState.quoteData));
         this.stateService.updateState({ ...currentState, quoteData: newQuoteData });
     }
