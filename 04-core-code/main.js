@@ -28,11 +28,16 @@ import { DriveAccessoriesView } from './ui/views/drive-accessories-view.js';
 const AUTOSAVE_STORAGE_KEY = 'quoteAutoSaveData';
 
 const migrateAutoSaveData = (oldData) => {
+    // Check if data is already in the new format and has uiMetadata. If not, patch it.
     if (oldData && oldData.products && oldData.currentProduct) {
-        console.log("Auto-saved data is already in the new format.");
+        if (!oldData.uiMetadata) {
+            console.warn("Patching modern auto-saved data with missing uiMetadata.");
+            oldData.uiMetadata = { lfModifiedRowIndexes: [] };
+        }
         return oldData;
     }
 
+    // Handle legacy data format migration.
     if (oldData && oldData.rollerBlindItems) {
         console.warn("Migrating legacy auto-saved data to the new format...");
         const newData = {
@@ -42,6 +47,10 @@ const migrateAutoSaveData = (oldData) => {
                     items: oldData.rollerBlindItems,
                     summary: oldData.summary || initialState.quoteData.products.rollerBlind.summary
                 }
+            },
+            // [ADDED] Ensure uiMetadata exists for migrated legacy data.
+            uiMetadata: {
+                lfModifiedRowIndexes: []
             },
             quoteId: oldData.quoteId || null,
             issueDate: oldData.issueDate || null,
@@ -107,7 +116,6 @@ class App {
             configManager: this.configManager
         });
         
-        // --- [CORRECTED] Injected 'productFactory' into FileService ---
         const fileService = new FileService({ productFactory });
 
         const uiService = new UIService({ stateService });
@@ -242,14 +250,12 @@ class App {
         this.inputHandler = new InputHandler(this.eventAggregator);
         this.inputHandler.initialize(); 
 
-        // Set initial focus after a short delay to ensure the UI is ready.
         setTimeout(() => {
             this.eventAggregator.publish('focusCell', { rowIndex: 0, column: 'width' });
         }, 100);
         
         console.log("Application running and interactive.");
 
-        // Add a ready signal for automation scripts.
         document.body.classList.add('app-is-ready');
     }
 }
