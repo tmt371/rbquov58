@@ -9,8 +9,6 @@ import { initialState } from '../config/initial-state.js';
 export class UIService {
     constructor({ stateService }) {
         this.stateService = stateService;
-        // The _initializeUIState method is no longer strictly necessary since initialState is now complete,
-        // but it's kept as a safeguard for future development to ensure no missing properties break the app.
         this._initializeUIState();
         console.log("UIService refactored to be a stateless logic processor.");
     }
@@ -20,7 +18,6 @@ export class UIService {
         let { ui } = currentState;
         let needsUpdate = false;
 
-        // Use the now-complete initialState.ui as the source of truth for defaults
         const defaults = initialState.ui;
 
         for (const key in defaults) {
@@ -50,7 +47,6 @@ export class UIService {
         return ui;
     }
 
-    // [CONFIRMED] This method now works correctly because initialState.ui is complete.
     reset() {
         this._updateUiState(ui => JSON.parse(JSON.stringify(initialState.ui)));
     }
@@ -157,28 +153,12 @@ export class UIService {
         this._updateUiState(ui => ({ ...ui, lfSelectedRowIndexes: [] }));
     }
 
-    addLFModifiedRows(rowIndexes) {
-        this._updateUiState(ui => {
-            const modifiedIndexes = new Set([...ui.lfModifiedRowIndexes, ...rowIndexes]);
-            return { ...ui, lfModifiedRowIndexes: Array.from(modifiedIndexes) };
-        });
-    }
-
-    removeLFModifiedRows(rowIndexes) {
-        this._updateUiState(ui => {
-            const modifiedIndexes = new Set(ui.lfModifiedRowIndexes);
-            for (const index of rowIndexes) {
-                modifiedIndexes.delete(index);
-            }
-            return { ...ui, lfModifiedRowIndexes: Array.from(modifiedIndexes) };
-        });
-    }
+    // [REMOVED] The following three methods have been moved to QuoteService
+    // as lfModifiedRowIndexes is now part of the persistent quoteData state.
+    // - addLFModifiedRows
+    // - removeLFModifiedRows
+    // - hasLFModifiedRows
     
-    hasLFModifiedRows() {
-        const { lfModifiedRowIndexes } = this.getState();
-        return lfModifiedRowIndexes.length > 0;
-    }
-
     setDualChainMode(mode) {
         this._updateUiState(ui => ({ ...ui, dualChainMode: mode }));
     }
@@ -234,7 +214,6 @@ export class UIService {
     setSummaryMotorPrice(value) { this._updateUiState(ui => ({ ...ui, summaryMotorPrice: value })); }
     setSummaryRemotePrice(value) { this._updateUiState(ui => ({ ...ui, summaryRemotePrice: value })); }
     setSummaryChargerPrice(value) { this._updateUiState(ui => ({ ...ui, summaryChargerPrice: value })); }
-    setSummaryCordPrice(value) { this._updateUiState(ui => ({ ...ui, summaryCordPrice: value })); }
     setSummaryAccessoriesTotal(value) { this._updateUiState(ui => ({ ...ui, summaryAccessoriesTotal: value })); }
 
     setF1RemoteDistribution(qty1, qty16) {

@@ -8,16 +8,11 @@ import { initialState } from '../config/initial-state.js';
  * like saving, loading, and exporting.
  */
 export class FileService {
-    // [MODIFIED] Constructor now accepts productFactory for dependency injection.
     constructor({ productFactory }) {
         this.productFactory = productFactory;
         console.log("FileService Initialized.");
     }
 
-    /**
-     * Triggers a file download in the browser.
-     * @private
-     */
     _triggerDownload(content, fileName, contentType) {
         const blob = new Blob([content], { type: contentType });
         const url = URL.createObjectURL(blob);
@@ -30,10 +25,6 @@ export class FileService {
         URL.revokeObjectURL(url);
     }
 
-    /**
-     * Generates a timestamped filename.
-     * @private
-     */
     _generateFileName(extension) {
         const now = new Date();
         const yyyy = now.getFullYear();
@@ -68,13 +59,6 @@ export class FileService {
         }
     }
 
-    /**
-     * [REFACTORED] Parses loaded file content into a quoteData object.
-     * The business logic for handling parsed CSV data has been moved here.
-     * @param {string} fileName The name of the loaded file.
-     * @param {string} content The content of the file.
-     * @returns {{success: boolean, data?: object, message?: string}}
-     */
     parseFileContent(fileName, content) {
         try {
             let loadedData = null;
@@ -82,24 +66,28 @@ export class FileService {
             if (fileName.toLowerCase().endsWith('.json')) {
                 loadedData = JSON.parse(content);
             } else if (fileName.toLowerCase().endsWith('.csv')) {
-                // Step 1: Get the pure array of items from the parser.
                 const items = csvToData(content);
                 if (items === null) {
                     throw new Error("CSV parser returned null.");
                 }
 
-                // Step 2: [NEW] Business logic is now handled here. Add the final empty row.
                 const productStrategy = this.productFactory.getProductStrategy('rollerBlind');
                 const newItem = productStrategy.getInitialItemData();
                 items.push(newItem);
 
-                // Step 3: [NEW] Construct the full quoteData object.
                 const newQuoteData = JSON.parse(JSON.stringify(initialState.quoteData));
                 newQuoteData.products.rollerBlind.items = items;
                 loadedData = newQuoteData;
                 
             } else {
                 return { success: false, message: `Unsupported file type: ${fileName}` };
+            }
+
+            // [ADDED] Safeguard for old save files that do not have the uiMetadata property.
+            if (loadedData && !loadedData.uiMetadata) {
+                loadedData.uiMetadata = {
+                    lfModifiedRowIndexes: []
+                };
             }
 
             const currentProduct = loadedData?.currentProduct;

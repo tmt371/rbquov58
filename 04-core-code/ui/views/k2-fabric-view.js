@@ -21,7 +21,8 @@ export class K2FabricView {
 
         if (newMode) {
             const items = this.quoteService.getItems();
-            const { lfModifiedRowIndexes } = this.uiService.getState();
+            // [REFACTORED] lfModifiedRowIndexes is now read from quoteData.
+            const { lfModifiedRowIndexes } = this.quoteService.getQuoteData().uiMetadata;
             const eligibleTypes = ['B2', 'B3', 'B4'];
             
             const hasConflict = items.some((item, index) => 
@@ -44,7 +45,8 @@ export class K2FabricView {
                             { 
                                 type: 'button', text: 'Keep Existing (Skip L-Filter)', 
                                 callback: () => {
-                                    this.indexesToExcludeFromBatchUpdate = new Set(this.uiService.getState().lfModifiedRowIndexes);
+                                    // [REFACTORED] lfModifiedRowIndexes is now read from quoteData.
+                                    this.indexesToExcludeFromBatchUpdate = new Set(this.quoteService.getQuoteData().uiMetadata.lfModifiedRowIndexes);
                                     this._enterFCMode(false);
                                 }
                             },
@@ -63,7 +65,8 @@ export class K2FabricView {
     _enterFCMode(isOverwriting) {
         if (isOverwriting) {
             const items = this.quoteService.getItems();
-            const { lfModifiedRowIndexes } = this.uiService.getState();
+            // [REFACTORED] lfModifiedRowIndexes is now read from quoteData.
+            const { lfModifiedRowIndexes } = this.quoteService.getQuoteData().uiMetadata;
             const indexesToClear = [];
             const eligibleTypes = ['B2', 'B3', 'B4'];
             items.forEach((item, index) => {
@@ -72,7 +75,8 @@ export class K2FabricView {
                 }
             });
             if (indexesToClear.length > 0) {
-                this.uiService.removeLFModifiedRows(indexesToClear);
+                // [REFACTORED] Call moved from uiService to quoteService.
+                this.quoteService.removeLFModifiedRows(indexesToClear);
             }
         }
         this.uiService.setActiveEditMode('K2');
@@ -115,7 +119,8 @@ export class K2FabricView {
             const item = this.quoteService.getItems()[rowIndex];
             
             if (activeEditMode === 'K2_LF_DELETE_SELECT') {
-                const { lfModifiedRowIndexes } = this.uiService.getState();
+                // [REFACTORED] lfModifiedRowIndexes is now read from quoteData.
+                const { lfModifiedRowIndexes } = this.quoteService.getQuoteData().uiMetadata;
                 if (!lfModifiedRowIndexes.includes(rowIndex)) {
                     this.eventAggregator.publish('showNotification', { message: 'Only items with a Light-Filter setting (pink background) can be selected for deletion.', type: 'error' });
                     return;
@@ -131,8 +136,6 @@ export class K2FabricView {
             
             if (activeEditMode === 'K2_LF_SELECT') {
                 this._updatePanelInputsState();
-
-                // [ADDED] Automatically focus the F-NAME input after a row is selected.
                 const { lfSelectedRowIndexes } = this.uiService.getState();
                 if (lfSelectedRowIndexes.length > 0) {
                     setTimeout(() => {
@@ -168,7 +171,8 @@ export class K2FabricView {
             const { lfSelectedRowIndexes } = this.uiService.getState();
             if (lfSelectedRowIndexes.length > 0) {
                 this.quoteService.removeLFProperties(lfSelectedRowIndexes);
-                this.uiService.removeLFModifiedRows(lfSelectedRowIndexes);
+                // [REFACTORED] Call moved from uiService to quoteService.
+                this.quoteService.removeLFModifiedRows(lfSelectedRowIndexes);
                 this.eventAggregator.publish('showNotification', { message: 'Light-Filter settings have been cleared.' });
             }
             this._exitAllK2Modes();
@@ -199,7 +203,8 @@ export class K2FabricView {
         
         if (fNameInput && fColorInput && fNameInput.value && fColorInput.value) {
             this.quoteService.batchUpdateLFProperties(lfSelectedRowIndexes, fNameInput.value, fColorInput.value);
-            this.uiService.addLFModifiedRows(lfSelectedRowIndexes);
+            // [REFACTORED] Call moved from uiService to quoteService.
+            this.quoteService.addLFModifiedRows(lfSelectedRowIndexes);
         }
     }
 

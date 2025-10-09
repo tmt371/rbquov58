@@ -40,7 +40,6 @@ export class TableComponent {
     }
 
     render(state) {
-        // [REFACTORED] Get items from the correct, nested location in the new state structure.
         const currentProductKey = state.quoteData.currentProduct;
         const items = state.quoteData.products[currentProductKey].items;
 
@@ -98,11 +97,14 @@ export class TableComponent {
     }
 
     _renderCellContent(cell, key, item, index, state) {
-        const { targetCell, lfModifiedRowIndexes } = state.ui;
+        // [REFACTORED] lfModifiedRowIndexes is now read from its new, persistent location in quoteData.uiMetadata.
+        const { targetCell } = state.ui;
+        const { lfModifiedRowIndexes } = state.quoteData.uiMetadata || { lfModifiedRowIndexes: [] };
 
         if (targetCell && index === targetCell.rowIndex && key === targetCell.column) {
             cell.classList.add('target-cell');
         }
+
         if (lfModifiedRowIndexes.includes(index) && (key === 'fabric' || key === 'color')) {
             cell.classList.add('is-lf-modified');
         }
@@ -117,7 +119,6 @@ export class TableComponent {
         return {
             sequence: (cell, item, index, state) => {
                 const { selectedRowIndex, isMultiSelectMode, multiSelectSelectedIndexes, lfSelectedRowIndexes } = state.ui;
-                // [REFACTORED] The items list is now correctly derived from the state object.
                 const currentProductKey = state.quoteData.currentProduct;
                 const items = state.quoteData.products[currentProductKey].items;
 

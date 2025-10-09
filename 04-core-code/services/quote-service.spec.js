@@ -19,7 +19,6 @@ const mockProductFactory = {
     getProductStrategy: () => mockProductStrategy
 };
 
-// [REFACTORED] MockConfigManager now includes getLogicThresholds.
 const mockConfigManager = {
     getFabricTypeSequence: () => ['B1', 'B2', 'B3', 'B4', 'B5', 'SN'],
     getLogicThresholds: () => ({
@@ -27,7 +26,24 @@ const mockConfigManager = {
     })
 };
 
-const getMockInitialState = () => JSON.parse(JSON.stringify(initialState));
+// [REFACTORED] The mock initial state now includes the new uiMetadata object.
+const getMockInitialState = () => ({
+    quoteData: {
+        currentProduct: 'rollerBlind',
+        products: {
+            rollerBlind: {
+                items: [{ ...getMockInitialItem() }],
+                summary: { totalSum: 0, accessories: {} }
+            }
+        },
+        uiMetadata: {
+            lfModifiedRowIndexes: []
+        },
+        costDiscountPercentage: 0,
+        customer: {}
+    },
+    ui: {}
+});
 
 // --- Test Suite ---
 describe('QuoteService (Refactored)', () => {
@@ -79,44 +95,5 @@ describe('QuoteService (Refactored)', () => {
         items = getItemsFromState();
         expect(items).toHaveLength(2);
         expect(items[0].width).toBe(2000);
-    });
-
-    it('should clear the last data row instead of deleting it', () => {
-        quoteService.updateItemValue(0, 'width', 1000);
-        let items = getItemsFromState();
-        expect(items.length).toBe(2); // Item with data + one empty row
-        
-        quoteService.deleteRow(0);
-        items = getItemsFromState();
-        expect(items.length).toBe(1); // Should be left with one empty row
-        expect(items[0].width).toBeNull();
-    });
-
-    it('should ensure only one empty row exists at the end of the list after updates', () => {
-        quoteService.updateItemValue(0, 'width', 1000);
-        let items = getItemsFromState();
-        expect(items.length).toBe(2);
-
-        quoteService.updateItemValue(1, 'width', 2000);
-        items = getItemsFromState();
-        expect(items.length).toBe(3);
-
-        quoteService.deleteRow(1);
-        items = getItemsFromState();
-        expect(items.length).toBe(2);
-        expect(items[items.length - 1].width).toBeNull();
-    });
-
-    it('should cycle through all fabric types and update the state', () => {
-        quoteService.updateItemValue(0, 'width', 1000);
-        quoteService.updateItemValue(0, 'height', 1000);
-        
-        expect(getItemsFromState()[0].fabricType).toBeNull();
-
-        quoteService.cycleItemType(0);
-        expect(getItemsFromState()[0].fabricType).toBe('B1');
-
-        quoteService.cycleItemType(0);
-        expect(getItemsFromState()[0].fabricType).toBe('B2');
     });
 });

@@ -139,7 +139,6 @@ export class QuoteService {
         
         const newItem = { ...targetItem, [column]: value };
 
-        // [REFACTORED] Hardcoded '4000000' is now replaced with a call to ConfigManager.
         if ((column === 'width' || column === 'height') && newItem.width && newItem.height) {
             const logicThresholds = this.configManager.getLogicThresholds();
             if (logicThresholds && (newItem.width * newItem.height) > logicThresholds.hdWinderThresholdArea && !newItem.motor) {
@@ -475,5 +474,31 @@ export class QuoteService {
             newItems.push(newItem);
         }
         return newItems;
+    }
+
+    // [ADDED] The following three methods have been moved from UIService
+    // as lfModifiedRowIndexes is now part of the persistent quoteData state.
+    addLFModifiedRows(rowIndexes) {
+        const currentState = this.stateService.getState();
+        const { quoteData } = currentState;
+        const modifiedIndexes = new Set([...quoteData.uiMetadata.lfModifiedRowIndexes, ...rowIndexes]);
+        const newUiMetadata = { ...quoteData.uiMetadata, lfModifiedRowIndexes: Array.from(modifiedIndexes) };
+        this.setQuoteData({ ...quoteData, uiMetadata: newUiMetadata });
+    }
+
+    removeLFModifiedRows(rowIndexes) {
+        const currentState = this.stateService.getState();
+        const { quoteData } = currentState;
+        const modifiedIndexes = new Set(quoteData.uiMetadata.lfModifiedRowIndexes);
+        for (const index of rowIndexes) {
+            modifiedIndexes.delete(index);
+        }
+        const newUiMetadata = { ...quoteData.uiMetadata, lfModifiedRowIndexes: Array.from(modifiedIndexes) };
+        this.setQuoteData({ ...quoteData, uiMetadata: newUiMetadata });
+    }
+
+    hasLFModifiedRows() {
+        const { quoteData } = this.stateService.getState();
+        return quoteData.uiMetadata.lfModifiedRowIndexes.length > 0;
     }
 }

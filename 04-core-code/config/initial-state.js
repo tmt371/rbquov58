@@ -3,8 +3,6 @@
 /**
  * @fileoverview Defines the initial state of the application.
  * This structure serves as the default blueprint for the entire app's data.
- * [v5.91 REVISION]: This file has been updated to include all UI state properties
- * to ensure a complete and successful application reset.
  */
 
 export const initialState = {
@@ -23,21 +21,21 @@ export const initialState = {
         multiSelectSelectedIndexes: [],
 
         // --- Left Panel Edit Modes & States ---
-        activeEditMode: null,       // 'K1', 'K2', 'K2_LF_SELECT', 'K3' etc.
-        targetCell: null,           // Used for targeted edits (e.g., location, chain)
+        activeEditMode: null,
+        targetCell: null,
         locationInputValue: '',
         
         // --- K2 (Fabric/LF) State ---
         lfSelectedRowIndexes: [],
-        lfModifiedRowIndexes: [],
+        // [REMOVED] lfModifiedRowIndexes is moved to quoteData.uiMetadata for persistence.
 
         // --- K5 (Dual/Chain) State ---
-        dualChainMode: null,        // 'dual' or 'chain'
+        dualChainMode: null,
         dualChainInputValue: '',
         dualPrice: null,
 
         // --- K4 (Drive/Accessories) State ---
-        driveAccessoryMode: null,   // 'winder', 'motor', 'remote', etc.
+        driveAccessoryMode: null,
         driveRemoteCount: 0,
         driveChargerCount: 0,
         driveCordCount: 0,
@@ -103,6 +101,10 @@ export const initialState = {
                     }
                 }
             }
+        },
+        // [ADDED] A new container for UI-related metadata that needs to be saved.
+        uiMetadata: {
+            lfModifiedRowIndexes: []
         },
         quoteId: null,
         issueDate: null,
