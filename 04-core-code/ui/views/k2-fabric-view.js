@@ -131,19 +131,28 @@ export class K2FabricView {
             
             if (activeEditMode === 'K2_LF_SELECT') {
                 this._updatePanelInputsState();
+
+                // [ADDED] Automatically focus the F-NAME input after a row is selected.
+                const { lfSelectedRowIndexes } = this.uiService.getState();
+                if (lfSelectedRowIndexes.length > 0) {
+                    setTimeout(() => {
+                        const fnameInput = document.querySelector('input[data-type="LF"][data-field="fabric"]');
+                        if (fnameInput) {
+                            fnameInput.focus();
+                            fnameInput.select();
+                        }
+                    }, 50);
+                }
             }
             this.publish();
         }
     }
 
-    /**
-     * [CORRECTED] Handles the Light-Filter button click. Now applies changes on the second click.
-     */
     handleLFEditRequest() {
         const { activeEditMode } = this.uiService.getState();
         
         if (activeEditMode === 'K2_LF_SELECT') {
-            this._applyLFChanges(); // Apply changes before exiting.
+            this._applyLFChanges();
             this._exitAllK2Modes();
         } else {
             this.uiService.setActiveEditMode('K2_LF_SELECT');
@@ -181,9 +190,6 @@ export class K2FabricView {
         this.publish();
     }
 
-    /**
-     * [NEW] A helper method to read LF inputs and apply changes to the state.
-     */
     _applyLFChanges() {
         const { lfSelectedRowIndexes } = this.uiService.getState();
         if (lfSelectedRowIndexes.length === 0) return;
