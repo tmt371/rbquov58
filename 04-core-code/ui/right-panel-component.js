@@ -15,7 +15,7 @@ export class RightPanelComponent {
         this.tabContents = this.panelElement.querySelectorAll('.tab-content');
 
         this.f1ManualPrices = {};
-        this.f1LinkedPrices = {};
+        this.f1LinkedPrices = {}; // [FIX] Initialize object to store linked prices
 
         this._cacheF1Elements();
         this._cacheF2Elements();
@@ -24,6 +24,7 @@ export class RightPanelComponent {
     }
 
     initialize() {
+        // --- Global Tab Click Handler ---
         if (this.tabContainer) {
             this.tabContainer.addEventListener('click', (event) => {
                 const target = event.target.closest('.tab-button');
@@ -47,13 +48,14 @@ export class RightPanelComponent {
     }
 
     _initializeF1ButtonListeners() {
-        // [REFACTORED] Removed listeners for f1-key-m-sel and f1-key-t-set
         const buttonEventMap = {
             'f1-key-insert': 'userRequestedInsertRow',
             'f1-key-delete': 'userRequestedDeleteRow',
             'f1-key-save': 'userRequestedSave',
             'f1-key-load': 'userRequestedLoad',
             'f1-key-export': 'userRequestedExportCSV',
+            'f1-key-m-sel': 'userToggledMultiSelectMode',
+            'f1-key-t-set': 'userRequestedMultiTypeSet',
             'f1-key-reset': 'userRequestedReset'
         };
 
@@ -64,6 +66,7 @@ export class RightPanelComponent {
             }
         }
 
+        // Add listener for the new clickable remote quantity div
         const remote1chQtyDiv = this.f1.inputs['remote-1ch'];
         if (remote1chQtyDiv) {
             remote1chQtyDiv.addEventListener('click', () => this.eventAggregator.publish('userRequestedRemoteDistribution'));
@@ -71,6 +74,7 @@ export class RightPanelComponent {
     }
 
     _initializeF1InputListeners() {
+        // Only listen to the inputs that are still manually editable
         const manualInputs = ['dual-combo', 'slim'];
         manualInputs.forEach(key => {
             const inputElement = this.f1.inputs[key];
@@ -86,9 +90,11 @@ export class RightPanelComponent {
         const quantity = value === '' ? 0 : parseInt(value, 10);
         if (isNaN(quantity) || quantity < 0) return;
 
+        // Note: For manual inputs, we still use the flexible calculation service
         const price = this.calculationService.calculateF1ComponentPrice(componentKey, quantity);
         this.f1ManualPrices[componentKey] = price;
 
+        // [FIX] Correctly access the nested price display element
         const priceElement = this.f1.displays.price[componentKey];
         if (priceElement) {
             priceElement.textContent = price > 0 ? `$${price.toFixed(2)}` : '';
@@ -98,6 +104,7 @@ export class RightPanelComponent {
     }
 
     _updateF1Total() {
+        // [FIX] Use class properties to ensure both manual and linked prices are available
         const manualTotal = Object.values(this.f1ManualPrices).reduce((sum, price) => sum + (price || 0), 0);
         const linkedTotal = Object.values(this.f1LinkedPrices).reduce((sum, price) => sum + (price || 0), 0);
         const total = manualTotal + linkedTotal;
@@ -116,6 +123,8 @@ export class RightPanelComponent {
                 'f1-key-save': query('#f1-key-save'),
                 'f1-key-load': query('#f1-key-load'),
                 'f1-key-export': query('#f1-key-export'),
+                'f1-key-m-sel': query('#f1-key-m-sel'),
+                'f1-key-t-set': query('#f1-key-t-set'),
                 'f1-key-reset': query('#f1-key-reset'),
             },
             inputs: {
@@ -228,6 +237,7 @@ export class RightPanelComponent {
         const uiState = state.ui;
         const formatPrice = (price) => (price > 0 ? `$${price.toFixed(2)}` : '');
 
+        // --- Handle Linked Items (Winder, Motor, Charger, Cord) ---
         const linkedQuantities = {
             winder: items.filter(item => item.winder === 'HD').length,
             motor: items.filter(item => !!item.motor).length,
@@ -235,28 +245,34 @@ export class RightPanelComponent {
             '3m-cord': uiState.driveCordCount
         };
 
+        const multipliers = { winder: 8, motor: 160, charger: 25, '3m-cord': 5 };
         this.f1LinkedPrices = {};
 
         for (const [key, qty] of Object.entries(linkedQuantities)) {
             if (this.f1.displays.qty[key]) {
                 this.f1.displays.qty[key].textContent = qty || '0';
             }
-            const price = this.calculationService.calculateF1ComponentPrice(key, qty);
+            const price = (qty || 0) * (multipliers[key] || 0);
             this.f1LinkedPrices[key] = price;
             if (this.f1.displays.price[key]) {
                 this.f1.displays.price[key].textContent = formatPrice(price);
             }
         }
-        
+
+        // --- Handle Remote Distribution ---
         const totalRemoteQty = uiState.driveRemoteCount || 0;
         let qty1ch = uiState.f1_remote_1ch_qty;
         let qty16ch = uiState.f1_remote_16ch_qty;
 
+        // Initialize distribution if not set
         if (qty16ch === null) {
             qty1ch = 0;
             qty16ch = totalRemoteQty;
+            // We don't directly modify state here, just for rendering.
+            // The dialog confirmation will set the state permanently.
         }
 
+        // Render quantities
         if (this.f1.inputs['remote-1ch']) {
             this.f1.inputs['remote-1ch'].textContent = qty1ch;
         }
@@ -264,6 +280,7 @@ export class RightPanelComponent {
             this.f1.displays.qty['remote-16ch'].textContent = qty16ch;
         }
 
+        // Calculate and render prices using the service for consistency
         const price1ch = this.calculationService.calculateF1ComponentPrice('remote-1ch', qty1ch);
         const price16ch = this.calculationService.calculateF1ComponentPrice('remote-16ch', qty16ch);
 
@@ -274,6 +291,7 @@ export class RightPanelComponent {
             this.f1.displays.price['remote-16ch'].textContent = formatPrice(price16ch);
         }
 
+        // Add remote prices to the linked prices for total calculation
         this.f1LinkedPrices['remote-1ch'] = price1ch;
         this.f1LinkedPrices['remote-16ch'] = price16ch;
 
@@ -291,6 +309,7 @@ export class RightPanelComponent {
         const formatDecimalCurrency = (value) => (typeof value === 'number') ? `$${value.toFixed(2)}` : '$';
         const formatValue = (value) => (value !== null && value !== undefined) ? value : '';
 
+        // Read accessory prices directly from the quoteData summary object.
         const winderPrice = accessories.winderCostSum || 0;
         const dualPrice = accessories.dualCostSum || 0;
         const motorPrice = accessories.motorCostSum || 0;
@@ -298,6 +317,7 @@ export class RightPanelComponent {
         const chargerPrice = accessories.chargerCostSum || 0;
         const cordPrice = accessories.cordCostSum || 0;
 
+        // Render accessory prices.
         this.f2.b2_winderPrice.textContent = formatIntegerCurrency(winderPrice);
         this.f2.b3_dualPrice.textContent = formatIntegerCurrency(dualPrice);
         this.f2.b6_motorPrice.textContent = formatIntegerCurrency(motorPrice);
@@ -305,6 +325,7 @@ export class RightPanelComponent {
         this.f2.b8_chargerPrice.textContent = formatIntegerCurrency(chargerPrice);
         this.f2.b9_cordPrice.textContent = formatIntegerCurrency(cordPrice);
 
+        // Re-calculate summary values locally for rendering purposes.
         const wifiSum = f2State.wifiSum || 0;
         const deliveryFee = f2State.deliveryFee || 0;
         const installFee = f2State.installFee || 0;
@@ -317,6 +338,7 @@ export class RightPanelComponent {
             (f2State.installFeeExcluded ? 0 : installFee) +
             (f2State.removalFeeExcluded ? 0 : removalFee);
 
+        // Render calculated summaries and fees.
         this.f2.b4_acceSum.textContent = formatIntegerCurrency(acceSum);
         this.f2.c10_wifiSum.textContent = formatIntegerCurrency(wifiSum);
         this.f2.b11_eAcceSum.textContent = formatIntegerCurrency(eAcceSum);

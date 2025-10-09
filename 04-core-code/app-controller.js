@@ -33,6 +33,9 @@ export class AppController {
         this._subscribeGlobalEvents();
         this._subscribeF2Events();
         
+        // This is the core of the reactive state update.
+        // Any service that updates the state via StateService will trigger this,
+        // which in turn re-renders the UI.
         this.eventAggregator.subscribe('_internalStateUpdated', (newState) => {
             this.eventAggregator.publish('stateChanged', newState);
         });
@@ -53,7 +56,7 @@ export class AppController {
         this.eventAggregator.subscribe('userMovedActiveCell', (data) => delegate('handleMoveActiveCell', data));
         this.eventAggregator.subscribe('userRequestedCycleType', () => delegate('handleCycleType'));
         this.eventAggregator.subscribe('userRequestedCalculateAndSum', () => delegate('handleCalculateAndSum'));
-        // [REMOVED] Subscription for 'userToggledMultiSelectMode' is no longer needed.
+        this.eventAggregator.subscribe('userToggledMultiSelectMode', () => delegate('handleToggleMultiSelectMode'));
         this.eventAggregator.subscribe('userChoseSaveThenLoad', () => delegate('handleSaveThenLoad'));
         this.eventAggregator.subscribe('typeCellLongPressed', (data) => delegate('handleTypeCellLongPress', data));
         this.eventAggregator.subscribe('typeButtonLongPressed', (data) => delegate('handleTypeButtonLongPress', data));
@@ -78,8 +81,11 @@ export class AppController {
         });
          this.eventAggregator.subscribe('sequenceCellClicked', (data) => {
             const { ui } = this.stateService.getState();
-            // In the new model, sequence clicks are always handled by quickQuoteView for selection.
-            this.quickQuoteView.handleSequenceCellClick(data);
+            if (ui.currentView === 'QUICK_QUOTE') {
+                this.quickQuoteView.handleSequenceCellClick(data);
+            } else {
+                this.detailConfigView.handleSequenceCellClick(data);
+            }
         });
 
         // Detail Config View Specific Events
@@ -100,6 +106,7 @@ export class AppController {
 
     _subscribeGlobalEvents() {
         this.eventAggregator.subscribe('userNavigatedToDetailView', () => this._handleNavigationToDetailView());
+        this.eventAggregator.subscribe('userNavigatedToQuickQuoteView', () => this._handleNavigationToQuickQuoteView());
         this.eventAggregator.subscribe('userSwitchedTab', (data) => this._handleTabSwitch(data));
         this.eventAggregator.subscribe('userRequestedLoad', () => this._handleUserRequestedLoad());
         this.eventAggregator.subscribe('userChoseLoadDirectly', () => this._handleLoadDirectly());
@@ -188,6 +195,11 @@ export class AppController {
         }
     }
 
+    _handleNavigationToQuickQuoteView() {
+        this.uiService.setCurrentView('QUICK_QUOTE');
+        this.uiService.setVisibleColumns(initialState.ui.visibleColumns);
+    }
+
     _handleTabSwitch({ tabId }) {
         this.detailConfigView.activateTab(tabId);
     }
@@ -224,6 +236,7 @@ export class AppController {
     }
     
     publishInitialState() {
+        // This is still needed once at the start to render the initial state.
         this.eventAggregator.publish('stateChanged', this._getFullState());
     }
 

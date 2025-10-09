@@ -75,10 +75,24 @@ export class UIService {
         this._updateUiState(ui => ({ ...ui, inputValue: '' }));
     }
 
-    // [REMOVED] toggleRowSelection is deprecated in favor of the new default multi-select behavior.
-    
-    // [REMOVED] toggleMultiSelectMode is no longer needed as multi-select is the default.
+    toggleRowSelection(rowIndex) {
+        this._updateUiState(ui => ({ ...ui, selectedRowIndex: (ui.selectedRowIndex === rowIndex) ? null : rowIndex }));
+    }
 
+    clearRowSelection() {
+        this._updateUiState(ui => ({ ...ui, selectedRowIndex: null }));
+    }
+
+    toggleMultiSelectMode() {
+        let isEnteringMode;
+        this._updateUiState(ui => {
+            isEnteringMode = !ui.isMultiSelectMode;
+            const newSelectedIndexes = isEnteringMode && ui.selectedRowIndex !== null ? [ui.selectedRowIndex] : [];
+            return { ...ui, isMultiSelectMode: isEnteringMode, multiSelectSelectedIndexes: newSelectedIndexes, selectedRowIndex: null };
+        });
+        return isEnteringMode;
+    }
+    
     toggleMultiSelectSelection(rowIndex) {
         this._updateUiState(ui => {
             const selectedIndexes = new Set(ui.multiSelectSelectedIndexes);
@@ -194,6 +208,7 @@ export class UIService {
     setSummaryMotorPrice(value) { this._updateUiState(ui => ({ ...ui, summaryMotorPrice: value })); }
     setSummaryRemotePrice(value) { this._updateUiState(ui => ({ ...ui, summaryRemotePrice: value })); }
     setSummaryChargerPrice(value) { this._updateUiState(ui => ({ ...ui, summaryChargerPrice: value })); }
+    // [ADDED] The missing method that caused the TypeError.
     setSummaryCordPrice(value) { this._updateUiState(ui => ({ ...ui, summaryCordPrice: value })); }
     setSummaryAccessoriesTotal(value) { this._updateUiState(ui => ({ ...ui, summaryAccessoriesTotal: value })); }
 

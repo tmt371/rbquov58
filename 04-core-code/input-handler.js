@@ -24,6 +24,7 @@ export class InputHandler {
 
     _setupPhysicalKeyboard() {
         window.addEventListener('keydown', (event) => {
+            // BUG FIX: Broaden the guard clause to ignore all non-readonly inputs
             if (event.target.matches('input:not([readonly])')) {
                 return;
             }
@@ -103,16 +104,22 @@ export class InputHandler {
             }
         };
 
-        // Right panel buttons
-        setupButton('f1-key-insert', 'userRequestedInsertRow');
-        setupButton('f1-key-delete', 'userRequestedDeleteRow');
-        setupButton('f1-key-save', 'userRequestedSave');
-        setupButton('f1-key-export', 'userRequestedExportCSV');
-        setupButton('f1-key-reset', 'userRequestedReset');
-        setupButton('f1-key-load', 'userRequestedLoad');
+        setupButton('key-insert', 'userRequestedInsertRow');
+        setupButton('key-delete', 'userRequestedDeleteRow');
+        setupButton('key-save', 'userRequestedSave');
+        setupButton('key-export', 'userRequestedExportCSV');
+        setupButton('key-reset', 'userRequestedReset');
+        setupButton('key-m-sel', 'userToggledMultiSelectMode');
 
-        // [ADDED] Listener for the new M-SET button on the keyboard panel.
-        setupButton('key-m-set', 'userRequestedMultiTypeSet');
+        // [NEW] Added event listener for the new T-Set button
+        setupButton('key-t-set', 'userRequestedMultiTypeSet');
+
+        const loadButton = document.getElementById('key-load');
+        if (loadButton) {
+            loadButton.addEventListener('click', () => {
+                this.eventAggregator.publish('userRequestedLoad');
+            });
+        }
     }
     
     _setupNumericKeyboard() {
