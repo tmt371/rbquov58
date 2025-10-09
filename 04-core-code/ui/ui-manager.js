@@ -15,10 +15,10 @@ export class UIManager {
         this.calculationService = calculationService;
 
         this.numericKeyboardPanel = document.getElementById('numeric-keyboard-panel');
-        this.insertButton = document.getElementById('key-insert');
-        this.deleteButton = document.getElementById('key-delete');
-        this.mSelButton = document.getElementById('key-m-sel');
-        this.clearButton = document.getElementById('key-clear');
+        
+        // Buttons are now managed by their respective components/handlers
+        // This makes UIManager a purer orchestrator of rendering.
+        
         this.leftPanelElement = document.getElementById('left-panel');
 
         const tableElement = document.getElementById('results-table');
@@ -67,11 +67,10 @@ export class UIManager {
                 this._updateExpandedPanelPosition();
             }
         });
-        // Observe the main app container for size changes, which will affect our panel's relative position.
         resizeObserver.observe(this.appElement);
     }
 
-_updateExpandedPanelPosition() {
+    _updateExpandedPanelPosition() {
         if (!this.leftPanelElement || !this.numericKeyboardPanel) return;
 
         const key7 = this.numericKeyboardPanel.querySelector('#key-7');
@@ -95,7 +94,6 @@ _updateExpandedPanelPosition() {
         this.leftPanelElement.style.width = `${newWidth}px`;
         this.leftPanelElement.style.height = `${newHeight}px`;
 
-        // [FIX ADDED] Set the calculated width as a CSS variable for the toggle to use.
         this.leftPanelElement.style.setProperty('--left-panel-width', `${newWidth}px`);
     }
 
@@ -122,48 +120,57 @@ _updateExpandedPanelPosition() {
             this.leftPanelElement.classList.toggle('is-expanded', isExpanded);
 
             if (isExpanded) {
-                // Use setTimeout to ensure the panel is visible and transition has started before calculating.
                 setTimeout(() => this._updateExpandedPanelPosition(), 0);
             }
         }
     }
 
+    /**
+     * [REFACTORED] Updates button states based on the length of the multi-select array.
+     */
     _updateButtonStates(state) {
-        const { selectedRowIndex, isMultiSelectMode, multiSelectSelectedIndexes } = state.ui;
+        const { multiSelectSelectedIndexes } = state.ui;
+        const selectionCount = multiSelectSelectedIndexes.length;
+        
         const currentProductKey = state.quoteData.currentProduct;
         const items = state.quoteData.products[currentProductKey].items;
 
-        const isSingleRowSelected = selectedRowIndex !== null;
-        
-        let insertDisabled = true;
-        if (isSingleRowSelected) {
-            const isLastRow = selectedRowIndex === items.length - 1;
-            if (!isLastRow) {
-                const nextItem = items[selectedRowIndex + 1];
-                const isNextRowEmpty = !nextItem.width && !nextItem.height && !nextItem.fabricType;
-                if (!isNextRowEmpty) { insertDisabled = false; }
+        const insertButton = document.getElementById('f1-key-insert');
+        const deleteButton = document.getElementById('f1-key-delete');
+        const mSetButton = document.getElementById('key-m-set'); // The new button
+        const clearButton = document.getElementById('key-clear');
+
+        // Insert is only enabled when exactly ONE row is selected.
+        if (insertButton) {
+            let insertDisabled = true;
+            if (selectionCount === 1) {
+                const selectedIndex = multiSelectSelectedIndexes[0];
+                const isLastRow = selectedIndex === items.length - 1;
+                if (!isLastRow) {
+                    const nextItem = items[selectedIndex + 1];
+                    const isNextRowEmpty = !nextItem.width && !nextItem.height && !nextItem.fabricType;
+                    if (!isNextRowEmpty) {
+                        insertDisabled = false;
+                    }
+                }
             }
+            insertButton.disabled = insertDisabled;
         }
-        if (this.insertButton) this.insertButton.disabled = insertDisabled;
 
-        let deleteDisabled = true;
-        if (isMultiSelectMode) {
-            if (multiSelectSelectedIndexes.size > 0) { deleteDisabled = false; }
-        } else if (isSingleRowSelected) {
-            const item = items[selectedRowIndex];
-            const isLastRow = selectedRowIndex === items.length - 1;
-            const isRowEmpty = !item.width && !item.height && !item.fabricType;
-            if (!(isLastRow && isRowEmpty)) { deleteDisabled = false; }
+        // Delete is enabled when ONE OR MORE rows are selected.
+        if (deleteButton) {
+            deleteButton.disabled = selectionCount === 0;
         }
-        if (this.deleteButton) this.deleteButton.disabled = deleteDisabled;
         
-        const mSelDisabled = !isSingleRowSelected && !isMultiSelectMode;
-        if (this.mSelButton) {
-            this.mSelButton.disabled = mSelDisabled;
-            this.mSelButton.style.backgroundColor = isMultiSelectMode ? '#f5c6cb' : '';
+        // M-SET (new) and T-SET (old) are enabled when ONE OR MORE rows are selected.
+        if (mSetButton) {
+            mSetButton.disabled = selectionCount === 0;
         }
-
-        if (this.clearButton) this.clearButton.disabled = !isSingleRowSelected;
+        
+        // Clear is only enabled when exactly ONE row is selected.
+        if (clearButton) {
+            clearButton.disabled = selectionCount !== 1;
+        }
     }
     
     _scrollToActiveCell(state) {

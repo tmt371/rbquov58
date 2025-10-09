@@ -87,6 +87,9 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    /* [ADDED] Make room for the new M-SET button */
+    justify-content: flex-end;
+    width: 60%;
 }
 
 .top-summary-container .label {
@@ -101,13 +104,28 @@
     text-align: right;
 }
 
-.top-summary-container .value.is-outdated {
-    color: #999999;
+.top-summary-container .value.is-outdated { color: #999999; }
+.top-summary-container .value.is-current { color: #ec4899; }
+
+/* [ADDED] Styles for the new M-SET button */
+.keyboard-action-button {
+    height: 25px;
+    width: 80px;
+    border: 1px solid #ccc;
+    background-color: #fff;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: bold;
+    color: #4b5563;
+    transition: background-color 0.1s;
+}
+.keyboard-action-button:active { background-color: #a0d3e8; }
+.keyboard-action-button:disabled {
+    background-color: #f3f4f6;
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
-.top-summary-container .value.is-current {
-    color: #ec4899;
-}
 
 .panel-toggle .toggle-arrow {
     width: 20px;
