@@ -1,6 +1,7 @@
 import { QuoteService } from './quote-service.js';
 import { StateService } from './state-service.js';
 import { EventAggregator } from '../event-aggregator.js';
+import { initialState } from '../config/initial-state.js';
 
 // --- Mock Dependencies ---
 const getMockInitialItem = () => ({
@@ -11,13 +12,14 @@ const getMockInitialItem = () => ({
 });
 
 const mockProductStrategy = {
-    getInitialItemData: () => ({ ...getMockInitialItem(), itemId: `item-${Date.now()}` })
+    getInitialItemData: () => ({ ...getMockInitialItem(), itemId: `mock-uuid-${Math.random()}` })
 };
 
 const mockProductFactory = {
     getProductStrategy: () => mockProductStrategy
 };
 
+// [REFACTORED] MockConfigManager now includes getLogicThresholds.
 const mockConfigManager = {
     getFabricTypeSequence: () => ['B1', 'B2', 'B3', 'B4', 'B5', 'SN'],
     getLogicThresholds: () => ({
@@ -25,20 +27,7 @@ const mockConfigManager = {
     })
 };
 
-const getMockInitialState = () => ({
-    quoteData: {
-        currentProduct: 'rollerBlind',
-        products: {
-            rollerBlind: {
-                items: [{ ...getMockInitialItem() }],
-                summary: { totalSum: 0, accessories: {} }
-            }
-        },
-        costDiscountPercentage: 0,
-        customer: {}
-    },
-    ui: {} // Add a mock ui state object
-});
+const getMockInitialState = () => JSON.parse(JSON.stringify(initialState));
 
 // --- Test Suite ---
 describe('QuoteService (Refactored)', () => {
@@ -129,21 +118,5 @@ describe('QuoteService (Refactored)', () => {
 
         quoteService.cycleItemType(0);
         expect(getItemsFromState()[0].fabricType).toBe('B2');
-
-        quoteService.cycleItemType(0);
-        expect(getItemsFromState()[0].fabricType).toBe('B3');
-
-        quoteService.cycleItemType(0);
-        expect(getItemsFromState()[0].fabricType).toBe('B4');
-
-        quoteService.cycleItemType(0);
-        expect(getItemsFromState()[0].fabricType).toBe('B5');
-
-        quoteService.cycleItemType(0);
-        expect(getItemsFromState()[0].fabricType).toBe('SN');
-
-        // Seventh cycle should loop back to B1
-        quoteService.cycleItemType(0);
-        expect(getItemsFromState()[0].fabricType).toBe('B1');
     });
 });

@@ -6,7 +6,7 @@
  */
 export class CalculationService {
     constructor({ stateService, productFactory, configManager }) {
-        this.stateService = stateService; // Added for consistency, though not heavily used yet.
+        this.stateService = stateService;
         this.productFactory = productFactory;
         this.configManager = configManager;
         console.log("CalculationService Initialized.");
@@ -14,8 +14,6 @@ export class CalculationService {
 
     /**
      * Calculates line prices for all valid items and the total sum using a provided product strategy.
-     * This method is purely functional: it receives data and returns a new object with the results,
-     * without causing any side effects or state mutations.
      */
     calculateAndSum(quoteData, productStrategy) {
         if (!productStrategy) {
@@ -84,13 +82,8 @@ export class CalculationService {
     }
 
     /**
-     * [MODIFIED] Generic bridge method to calculate accessory prices OR costs.
-     * It now checks if a specific 'costKey' is passed in the data object.
-     * If so, it calculates cost. Otherwise, it calculates the sale price.
-     * @param {string} productType - The product type (e.g., 'rollerBlind').
-     * @param {string} accessoryName - The generic name of the accessory (e.g., 'remote').
-     * @param {object} data - Data needed for calculation (e.g., { items }, { count, costKey }).
-     * @returns {number} The calculated price or cost.
+     * [REFACTORED] Generic bridge method to calculate accessory prices OR costs.
+     * It now fetches mappings from the ConfigManager.
      */
     calculateAccessoryPrice(productType, accessoryName, data) {
         const productStrategy = this.productFactory.getProductStrategy(productType);
@@ -98,12 +91,10 @@ export class CalculationService {
 
         const { accessoryPriceKeyMap, accessoryMethodNameMap } = this.configManager.getAccessoryMappings();
         let priceKey;
-
-        // Check if a specific cost key is passed for cost calculation
+        
         if (data && data.costKey) {
             priceKey = data.costKey;
         } else {
-            // Otherwise, use the standard sale price mapping from the config
             priceKey = accessoryPriceKeyMap[accessoryName];
         }
         
@@ -126,17 +117,16 @@ export class CalculationService {
     }
 
     /**
-     * [NEW] Calculates the total price for a given F1 panel component based on its quantity.
-     * @param {string} componentKey - The key identifying the component from the F1 panel (e.g., 'winder', 'motor').
-     * @param {number} quantity - The quantity entered by the user.
-     * @returns {number} The calculated total price for the component.
+     * [REFACTORED] Calculates the total price for a given F1 panel component based on its quantity.
+     * It now fetches mappings from the ConfigManager.
      */
     calculateF1ComponentPrice(componentKey, quantity) {
         if (typeof quantity !== 'number' || quantity < 0) {
             return 0;
         }
-
-        const keyMap = {
+        
+        // This is a temporary map until F1 components are fully data-driven.
+        const f1KeyMap = {
             'winder': 'winderHD',
             'motor': 'motorStandard',
             'remote-1ch': 'remoteSingleChannel',
@@ -147,7 +137,7 @@ export class CalculationService {
             'slim': 'slimComboBracket'
         };
 
-        const accessoryKey = keyMap[componentKey];
+        const accessoryKey = f1KeyMap[componentKey];
         if (!accessoryKey) {
             console.error(`No accessory key found for F1 component: ${componentKey}`);
             return 0;
@@ -162,11 +152,7 @@ export class CalculationService {
     }
 
     /**
-     * [NEW] Calculates all values for the F2 summary panel.
-     * This logic was moved from app-controller.js to centralize business calculations.
-     * @param {object} quoteData - The entire quote data object.
-     * @param {object} f2State - The state object for the F2 panel from uiService.
-     * @returns {object} An object containing all calculated F2 summary values.
+     * Calculates all values for the F2 summary panel.
      */
     calculateF2Summary(quoteData, f2State) {
         const currentProductKey = quoteData.currentProduct;

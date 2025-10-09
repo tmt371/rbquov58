@@ -80,23 +80,21 @@ export class QuoteService {
         const productKey = this._getCurrentProductKey();
         const productData = quoteData.products[productKey];
         let items = [...productData.items];
-
-        const itemToDelete = items[selectedIndex];
         
-        // This logic was moved from the view. The view decides, the service executes.
+        const itemToDelete = items[selectedIndex];
+        if (!itemToDelete) return;
+
         const isLastPopulatedRow = selectedIndex === items.length - 2 && items.length > 1 && !items[items.length - 1].width && !items[items.length-1].height;
 
         if (isLastPopulatedRow || items.length === 1) {
              const productStrategy = this.productFactory.getProductStrategy(productKey);
              const newItem = productStrategy.getInitialItemData();
-             newItem.itemId = itemToDelete.itemId; // Preserve itemId for stability
+             newItem.itemId = itemToDelete.itemId;
              items[selectedIndex] = newItem;
         } else {
              items.splice(selectedIndex, 1);
         }
 
-        // [CORRECTED] Add the safeguard to prevent an empty items array.
-        // This logic is mirrored from the deleteMultipleRows method.
         if (items.length === 0) {
             const productStrategy = this.productFactory.getProductStrategy(productKey);
             items.push(productStrategy.getInitialItemData());
@@ -141,6 +139,7 @@ export class QuoteService {
         
         const newItem = { ...targetItem, [column]: value };
 
+        // [REFACTORED] Hardcoded '4000000' is now replaced with a call to ConfigManager.
         if ((column === 'width' || column === 'height') && newItem.width && newItem.height) {
             const logicThresholds = this.configManager.getLogicThresholds();
             if (logicThresholds && (newItem.width * newItem.height) > logicThresholds.hdWinderThresholdArea && !newItem.motor) {

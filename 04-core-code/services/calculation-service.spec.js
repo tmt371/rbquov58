@@ -17,6 +17,7 @@ const mockProductStrategy = {
     })
 };
 
+// [REFACTORED] MockConfigManager now includes getAccessoryMappings.
 const mockConfigManager = {
     getPriceMatrix: jest.fn((fabricType) => {
         if (fabricType === 'B5') {
@@ -56,7 +57,6 @@ describe('CalculationService (Refactored)', () => {
 
     beforeEach(() => {
         eventAggregator = new EventAggregator();
-        // stateService is mocked here for constructor consistency, though not directly used in these tests.
         stateService = new StateService({ initialState: {}, eventAggregator });
 
         calculationService = new CalculationService({
@@ -67,10 +67,10 @@ describe('CalculationService (Refactored)', () => {
         
         mockProductStrategy.calculatePrice.mockClear();
         mockConfigManager.getPriceMatrix.mockClear();
+        mockConfigManager.getAccessoryMappings.mockClear();
     });
 
     it('should correctly calculate and sum prices for valid items using the product strategy', () => {
-        // [REFACTORED] Updated mock data to use the new generic state structure.
         const quoteData = {
             currentProduct: 'rollerBlind',
             products: {
@@ -92,8 +92,6 @@ describe('CalculationService (Refactored)', () => {
         };
 
         const { updatedQuoteData, firstError } = calculationService.calculateAndSum(quoteData, mockProductStrategy);
-
-        // [REFACTORED] Assertions now point to the correct nested structure.
         const productSummary = updatedQuoteData.products.rollerBlind.summary;
         const productItems = updatedQuoteData.products.rollerBlind.items;
 
@@ -106,7 +104,6 @@ describe('CalculationService (Refactored)', () => {
     });
 
     it('should return the first error encountered and still sum valid items', () => {
-        // [REFACTORED] Updated mock data to use the new generic state structure.
         const quoteData = {
             currentProduct: 'rollerBlind',
             products: {
@@ -122,8 +119,6 @@ describe('CalculationService (Refactored)', () => {
         };
 
         const { updatedQuoteData, firstError } = calculationService.calculateAndSum(quoteData, mockProductStrategy);
-
-        // [REFACTORED] Assertions now point to the correct nested structure.
         const productSummary = updatedQuoteData.products.rollerBlind.summary;
         const productItems = updatedQuoteData.products.rollerBlind.items;
 
@@ -140,13 +135,12 @@ describe('CalculationService (Refactored)', () => {
         const productType = 'rollerBlind';
         const items = [{ dual: 'D' }, { dual: 'D' }];
         
-        // Mock the strategy's method for this specific test
         mockProductStrategy.calculateDualPrice = jest.fn(() => 10);
 
         const price = calculationService.calculateAccessoryPrice(productType, 'dual', { items });
 
         expect(price).toBe(10);
-        // Verify that the service correctly looked up the price and called the strategy's method
+        expect(mockConfigManager.getAccessoryMappings).toHaveBeenCalledTimes(1);
         expect(mockConfigManager.getAccessoryPrice).toHaveBeenCalledWith('comboBracket');
         expect(mockProductStrategy.calculateDualPrice).toHaveBeenCalledWith(items, 10);
     });
