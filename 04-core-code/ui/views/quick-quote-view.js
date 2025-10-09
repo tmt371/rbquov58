@@ -22,8 +22,6 @@ export class QuickQuoteView {
         if (!isEnteringMode) {
             this.focusService.focusFirstEmptyCell('width');
         }
-        // This publish call might be redundant now, but we'll keep it for now
-        // to ensure multi-select mode toggling is visually immediate.
         this.publish();
     }
 
@@ -47,7 +45,7 @@ export class QuickQuoteView {
     handleDeleteRow() {
         const { isMultiSelectMode, multiSelectSelectedIndexes, selectedRowIndex } = this.uiService.getState();
         if (isMultiSelectMode) {
-            if (multiSelectSelectedIndexes.size === 0) {
+            if (multiSelectSelectedIndexes.length === 0) {
                 this.eventAggregator.publish('showNotification', { message: 'Please select rows to delete.' });
                 return;
             }
@@ -56,7 +54,10 @@ export class QuickQuoteView {
             this.focusService.focusFirstEmptyCell('width');
         } else {
             if (selectedRowIndex === null) return;
+
+            // The logic for deciding to clear or delete is now in the service
             this.quoteService.deleteRow(selectedRowIndex);
+            
             this.uiService.clearRowSelection();
             this.uiService.setSumOutdated(true);
             this.focusService.focusAfterDelete();
@@ -119,7 +120,6 @@ export class QuickQuoteView {
             this.uiService.setSumOutdated(true);
         }
         this.focusService.focusAfterCommit();
-        // The final publish call is now handled automatically by the state update cycle
     }
 
     handleSaveToFile() {
@@ -173,7 +173,8 @@ export class QuickQuoteView {
             this.uiService.setActiveCell(rowIndex, column);
             const changedIndexes = this.quoteService.cycleItemType(rowIndex);
             if (changedIndexes.length > 0) {
-                this.uiService.removeLFModifiedRows(changedIndexes);
+                // [CORRECTED] Changed call from uiService to quoteService
+                this.quoteService.removeLFModifiedRows(changedIndexes);
                 this.uiService.setSumOutdated(true);
             }
         }
@@ -194,9 +195,9 @@ export class QuickQuoteView {
         
         const changedIndexes = this.quoteService.batchUpdateFabricType(nextType);
         if (changedIndexes.length > 0) {
-            this.uiService.removeLFModifiedRows(changedIndexes);
+            // [CORRECTED] Changed call from uiService to quoteService
+            this.quoteService.removeLFModifiedRows(changedIndexes);
             this.uiService.setSumOutdated(true);
-            this.publish();
         }
     }
 
@@ -235,9 +236,9 @@ export class QuickQuoteView {
         this._showFabricTypeDialog((newType) => {
             const changedIndexes = this.quoteService.setItemType(rowIndex, newType);
             if (changedIndexes.length > 0) {
-                this.uiService.removeLFModifiedRows(changedIndexes);
+                // [CORRECTED] Changed call from uiService to quoteService
+                this.quoteService.removeLFModifiedRows(changedIndexes);
                 this.uiService.setSumOutdated(true);
-                this.publish();
             }
             return changedIndexes.length > 0;
         }, `Set fabric type for Row #${rowIndex + 1}:`);
@@ -247,9 +248,9 @@ export class QuickQuoteView {
         this._showFabricTypeDialog((newType) => {
             const changedIndexes = this.quoteService.batchUpdateFabricType(newType);
             if (changedIndexes.length > 0) {
-                this.uiService.removeLFModifiedRows(changedIndexes);
+                // [CORRECTED] Changed call from uiService to quoteService
+                this.quoteService.removeLFModifiedRows(changedIndexes);
                 this.uiService.setSumOutdated(true);
-                this.publish();
             }
             return changedIndexes.length > 0;
         }, 'Set fabric type for ALL rows:');
@@ -263,19 +264,19 @@ export class QuickQuoteView {
             return;
         }
 
-        if (multiSelectSelectedIndexes.size === 0) {
+        if (multiSelectSelectedIndexes.length === 0) {
             this.eventAggregator.publish('showNotification', { message: 'Please select one or more rows to set the fabric type.', type: 'error' });
             return;
         }
 
-        const title = `Set fabric type for ${multiSelectSelectedIndexes.size} selected rows:`;
+        const title = `Set fabric type for ${multiSelectSelectedIndexes.length} selected rows:`;
         this._showFabricTypeDialog((newType) => {
             const changedIndexes = this.quoteService.batchUpdateFabricTypeForSelection(multiSelectSelectedIndexes, newType);
             if (changedIndexes.length > 0) {
-                this.uiService.removeLFModifiedRows(changedIndexes);
+                // [CORRECTED] Changed call from uiService to quoteService
+                this.quoteService.removeLFModifiedRows(changedIndexes);
                 this.uiService.toggleMultiSelectMode();
                 this.uiService.setSumOutdated(true);
-                this.publish();
             }
             return changedIndexes.length > 0;
         }, title);
@@ -286,8 +287,6 @@ export class QuickQuoteView {
         const productStrategy = this.productFactory.getProductStrategy(this.currentProduct);
         const { updatedQuoteData, firstError } = this.calculationService.calculateAndSum(currentQuoteData, productStrategy);
 
-        // [CORRECTED] Use the service method to update state instead of direct assignment.
-        // This ensures the change is committed to the single source of truth.
         this.quoteService.setQuoteData(updatedQuoteData);
 
         if (firstError) {
@@ -297,7 +296,6 @@ export class QuickQuoteView {
         } else {
             this.uiService.setSumOutdated(false);
         }
-        // Redundant 'publish()' call removed. State update will trigger re-render.
     }
 
     handleSaveThenLoad() {
